@@ -12,18 +12,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { ApiError } from "@/utils/apiError";
 import { asyncHandler } from "@/utils/asyncHandler";
 import { addRecordingJob } from "@/lib/video/queue";
-// Importing the worker here starts it in-process during development.
-// In production, run it as a separate process instead.
-import "@/lib/video/worker";
 
 export const POST = asyncHandler(async (req: NextRequest) => {
   const body = await req.json().catch(() => {
     throw new ApiError(400, "Invalid JSON body");
   });
 
-  const { url, options } = body as {
+  const { url } = body as {
     url?: unknown;
-    options?: { duration?: unknown };
   };
 
   if (!url || typeof url !== "string") {
@@ -42,14 +38,7 @@ export const POST = asyncHandler(async (req: NextRequest) => {
     throw new ApiError(400, "URL must use http or https protocol");
   }
 
-  const duration =
-    typeof options?.duration === "number" && options.duration > 0
-      ? Math.min(options.duration, 120) // cap at 2 minutes
-      : undefined;
-
-  const jobId = await addRecordingJob(parsedUrl.toString(), {
-    targetDurationSeconds: duration,
-  });
+  const jobId = await addRecordingJob(parsedUrl.toString());
 
   return NextResponse.json({ jobId }, { status: 202 });
 });
