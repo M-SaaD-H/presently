@@ -2,15 +2,8 @@
  * End-to-end test for the recording pipeline.
  *
  * Tests both paths:
- *   1. Direct call — recordWebsite() invoked without the queue
- *   2. Queue path  — job enqueued via addRecordingJob(), polled until done
- *
- * Usage: npx tsx scripts/test-recording.ts
- *
- * Prerequisites:
- *   - redis-server running on REDIS_URL (default redis://localhost:6379)
- *   - Xvfb, xdpyinfo, ffmpeg installed
- *   - DISPLAY not required (Xvfb creates its own)
+ *   1. Direct call: recordWebsite() invoked without the queue
+ *   2. Queue path: job enqueued via addRecordingJob(), polled until done
  */
 
 import { recordWebsite } from "../lib/video/recorder";
@@ -18,7 +11,7 @@ import { addRecordingJob, getJobStatus } from "../lib/video/queue";
 import { getWorker } from "../lib/video/worker";
 import { nanoid } from "nanoid";
 
-const TEST_URL = "https://example.com";
+const TEST_URL = "https://heysaad.me/writing/chasing-bottlenecks-in-ember";
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -30,7 +23,6 @@ async function testDirect(): Promise<void> {
   const job = {
     jobId: `test-direct-${nanoid(6)}`,
     url: TEST_URL,
-    targetDurationSeconds: 10,
     viewport: { width: 1280, height: 800 },
   };
 
@@ -48,7 +40,7 @@ async function testQueue(): Promise<void> {
   // Start the worker so it processes jobs
   getWorker();
 
-  const jobId = await addRecordingJob(TEST_URL, { targetDurationSeconds: 10 });
+  const jobId = await addRecordingJob(TEST_URL);
   console.log(`Job enqueued: ${jobId}`);
 
   // Poll until done or failed
