@@ -17,7 +17,6 @@ export const recordingQueue = new Queue<RecordingJob, RecordingResult, string>(
 );
 
 export interface AddJobOptions {
-  targetDurationSeconds?: number;
   viewport?: { width: number; height: number };
 }
 
@@ -33,7 +32,6 @@ export async function addRecordingJob(
   const jobData: RecordingJob = {
     jobId,
     url,
-    targetDurationSeconds: options.targetDurationSeconds ?? 30,
     viewport: options.viewport ?? { width: 1280, height: 800 },
   };
 

@@ -2,7 +2,7 @@
  * FFmpeg process wrapper for x11grab screen recording.
  *
  * Captures from an Xvfb virtual display at 30fps using libx264.
- * The stop function sends 'q' to stdin for a clean mux — never SIGKILL,
+ * The stop function sends 'q' to stdin for a clean mux, never SIGKILL,
  * which would corrupt the MP4 container.
  */
 
@@ -17,7 +17,7 @@ const STOP_TIMEOUT_MS = 15_000;
 
 /**
  * Starts an FFmpeg x11grab recording from the given Xvfb display.
- * Returns immediately — recording happens asynchronously in the child process.
+ * Returns immediately, recording happens asynchronously in the child process.
  */
 export function startRecording(
   display: number,
@@ -31,6 +31,7 @@ export function startRecording(
     "-f", "x11grab",
     "-r", String(RECORDING_FPS),
     "-s", RECORDING_RESOLUTION,
+    "-draw_mouse", "0",
     "-i", `${displayStr}+0,0`,
     // Encoding: libx264, visually lossless quality, fast preset, yuv420p for
     // broad player compatibility
@@ -69,7 +70,7 @@ export function stopRecording(proc: FFmpegProcess): Promise<void> {
       ffmpeg.kill("SIGTERM");
       reject(
         new Error(
-          `FFmpeg did not exit within ${STOP_TIMEOUT_MS}ms — sent SIGTERM`
+          `FFmpeg did not exit within ${STOP_TIMEOUT_MS}ms, sent SIGTERM`
         )
       );
     }, STOP_TIMEOUT_MS);
@@ -77,7 +78,7 @@ export function stopRecording(proc: FFmpegProcess): Promise<void> {
     ffmpeg.on("close", (code) => {
       clearTimeout(timeout);
       if (code === 0 || code === 255) {
-        // FFmpeg exits with 255 when killed by signal after 'q' — still valid
+        // FFmpeg exits with 255 when killed by signal after 'q' -> still valid
         resolve();
       } else {
         reject(new Error(`FFmpeg exited with code ${code}`));

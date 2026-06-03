@@ -3,7 +3,6 @@ import type { ChildProcess } from "child_process";
 export interface RecordingJob {
   jobId: string;
   url: string;
-  targetDurationSeconds: number;
   viewport: {
     width: number;
     height: number;
@@ -16,12 +15,12 @@ export interface RecordingResult {
   outputPath: string;
   /** Public-facing URL (local path or S3 URL depending on STORAGE_TYPE) */
   publicUrl: string;
+  /** Measured duration of the recording in seconds */
   durationSeconds: number;
   fileSizeBytes: number;
 }
 
 export interface ScrollOptions {
-  targetDurationSeconds: number;
   /** Milliseconds to pause at top before scrolling (lets opening animations play) */
   pauseAtTopMs: number;
   /** Milliseconds to pause at bottom after scrolling */

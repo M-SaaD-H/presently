@@ -3,18 +3,15 @@
  *
  * Animation-first recording sequence:
  *   1. Allocate an isolated Xvfb display from the pool
- *   2. Start Xvfb (virtual X11 display — Wayland-compatible via XWayland)
+ *   2. Start Xvfb (virtual X11 display, Wayland-compatible via XWayland)
  *   3. Launch Chrome (pointing at the Xvfb display)
- *   4. Start FFmpeg x11grab capture — recording begins NOW on the blank tab
- *   5. Navigate to the target URL — all page-load animations are captured
+ *   4. Start FFmpeg x11grab capture, recording begins NOW on the blank tab
+ *   5. Navigate to the target URL, all page-load animations are captured
  *   6. Wait for the load event + animationSettleMs grace period
  *   7. Run the natural human-like scroll session
  *   8. Stop FFmpeg cleanly (stdin 'q', await exit)
- *   9. Tear down Chrome → Xvfb → release display
+ *   9. Tear down Chrome -> Xvfb -> release display
  *  10. Move the output file to permanent storage
- *
- * Every step is inside try/finally so processes are always cleaned up even
- * if an error occurs mid-recording.
  */
 
 import { spawn } from "child_process";
@@ -23,6 +20,7 @@ import os from "os";
 import path from "path";
 import fs from "fs/promises";
 import { chromium } from "playwright";
+import { getLocalOutputPath } from "./storage";
 
 import { acquireDisplay, releaseDisplay } from "./displayPool";
 import { startRecording, stopRecording } from "./ffmpeg";
@@ -47,14 +45,15 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
   let xvfbProc: ChildProcess | null = null;
   let ffmpegHandle: ReturnType<typeof startRecording> | null = null;
   let browserContext: Awaited<ReturnType<typeof chromium.launchPersistentContext>> | null = null;
+  let recordedDurationSeconds = 0;
   const tempPath = path.join(os.tmpdir(), `presently-${job.jobId}.mp4`);
 
   try {
-    // ── 1. Start Xvfb ──────────────────────────────────────────────────────
+    // Start Xvfb
     xvfbProc = spawnXvfb(display);
     await waitForXvfb(display);
 
-    // ── 2. Launch Chrome via Playwright ────────────────────────────────────
+    // Launch Chrome via Playwright
     // We use launchPersistentContext so we get a real user-data-dir, which
     // enables Chrome to render sites exactly as a user would see them.
     const userDataDir = path.join(os.tmpdir(), `presently-profile-${job.jobId}`);
@@ -64,6 +63,7 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
     browserContext = await chromium.launchPersistentContext(userDataDir, {
       executablePath: CHROME_EXECUTABLE,
       headless: false,
+      chromiumSandbox: true,
       viewport: {
         width: job.viewport?.width ?? VIEWPORT_WIDTH,
         height: job.viewport?.height ?? VIEWPORT_HEIGHT,
@@ -75,11 +75,8 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
       args: [
         // Force X11 mode so Chrome works inside the Xvfb display on Wayland
         "--ozone-platform=x11",
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
         // Disable features that can interfere with smooth rendering in a VM display
         "--disable-dev-shm-usage",
-        "--disable-gpu-sandbox",
         "--disable-software-rasterizer",
         // Ensure animations run at full speed — not throttled for background tabs
         "--disable-background-timer-throttling",
@@ -88,53 +85,44 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
         // Keep a consistent window size matching the FFmpeg capture resolution
         `--window-size=${VIEWPORT_WIDTH},${VIEWPORT_HEIGHT}`,
         "--window-position=0,0",
+        "--hide-scrollbars",
+        // For full screen mode
+        "--kiosk",
       ],
       ignoreDefaultArgs: ["--enable-automation"],
     });
 
     const page = browserContext.pages()[0] ?? await browserContext.newPage();
 
-    // ── 3. Start FFmpeg recording (blank Chrome tab is first frame) ─────────
-    ffmpegHandle = startRecording(display, tempPath);
-
-    // Small delay so FFmpeg's x11grab initializes before we navigate.
-    // Without this, the first frames can be black or skipped.
-    await sleep(500);
-
-    // ── 4. Navigate — all page-load animations are captured from this point ──
     await page.goto(job.url, {
-      // 'load' fires after DOMContentLoaded + stylesheets/images are ready.
-      // We intentionally do NOT use 'networkidle' because:
-      //   a) many sites stream content and never fully idle
-      //   b) waiting for idle means missing the initial CSS transition animations
       waitUntil: "load",
       timeout: 60_000,
     });
 
-    // ── 5. Let opening animations run ───────────────────────────────────────
-    // This grace period captures hero animations, fade-ins, route transitions,
-    // etc. that fire immediately after the load event.
+    ffmpegHandle = startRecording(display, tempPath);
+
+    await sleep(500);
+
     const scrollOpts: Partial<ScrollOptions> = {
-      targetDurationSeconds: job.targetDurationSeconds,
-      pauseAtTopMs: 2000,      // 2s pause at top — lets hero animations breathe
-      pauseAtBottomMs: 2000,
-      animationSettleMs: 1000, // Extra settle before scroll starts
+      pauseAtTopMs: 2000,
+      pauseAtBottomMs: 1000,
+      animationSettleMs: 1000,
     };
+
     await sleep(scrollOpts.animationSettleMs ?? 1000);
 
-    // ── 6. Scroll session ────────────────────────────────────────────────────
+    const recordingStart = Date.now();
     await runScrollSession(page, scrollOpts);
+    recordedDurationSeconds = (Date.now() - recordingStart) / 1000;
 
-    // ── 7. Stop FFmpeg cleanly ───────────────────────────────────────────────
     await stopRecording(ffmpegHandle);
     ffmpegHandle = null;
 
-    // ── 8. Tear down browser ─────────────────────────────────────────────────
     await browserContext.close();
     browserContext = null;
 
     // Clean up the temporary user-data-dir (non-fatal if it fails)
-    await fs.rm(userDataDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(userDataDir, { recursive: true, force: true }).catch(() => { });
 
   } finally {
     // Guaranteed cleanup regardless of where an error occurred
@@ -144,7 +132,7 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
       });
     }
     if (browserContext) {
-      await browserContext.close().catch(() => {});
+      await browserContext.close().catch(() => { });
     }
     if (xvfbProc && !xvfbProc.killed) {
       xvfbProc.kill("SIGTERM");
@@ -152,28 +140,25 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
     releaseDisplay(display);
   }
 
-  // ── 9. Persist to storage ──────────────────────────────────────────────────
-  const publicUrl = await saveVideo(tempPath, job.jobId);
+  const { size } = await fs.stat(tempPath);
 
-  // Measure the output file
-  const { size } = await fs.stat(tempPath).catch(async () => {
-    // File may have been moved by saveVideo already; try the output location
-    const { getLocalOutputPath } = await import("./storage");
-    return fs.stat(getLocalOutputPath(job.jobId));
-  });
+  const publicUrl = await saveVideo(tempPath, job.jobId);
+  const isCloudinary = publicUrl.startsWith("http");
 
   return {
     jobId: job.jobId,
-    outputPath: tempPath,
+    outputPath: isCloudinary ? publicUrl : getLocalOutputPath(job.jobId),
     publicUrl,
-    // Approximate duration from job options — FFmpeg could be queried for exact
-    durationSeconds: job.targetDurationSeconds,
+    durationSeconds: recordedDurationSeconds,
     fileSizeBytes: size,
   };
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+/* ========================= Helpers ========================= */
 
+/**
+ * Spawns a child process running Xvfb on the given display.
+ */
 function spawnXvfb(display: number): ChildProcess {
   const proc = spawn(
     "Xvfb",
