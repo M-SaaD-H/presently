@@ -11,6 +11,7 @@ const JobSchema = new mongoose.Schema(
     },
     publicUrl: { type: String },
     error: { type: String },
+    duration: { type: Number },
   },
   { timestamps: true }
 );

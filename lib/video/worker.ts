@@ -33,6 +33,7 @@ function createWorker(): Worker<RecordingJob, RecordingResult, string> {
       await Job.findByIdAndUpdate(jobId, {
         status: "completed",
         publicUrl: result.publicUrl,
+        duration: result.durationSeconds,
       });
 
       console.log(
