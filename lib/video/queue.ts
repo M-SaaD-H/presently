@@ -3,7 +3,6 @@
  */
 
 import { Queue } from "bullmq";
-import { nanoid } from "nanoid";
 import { getRedisConnectionOptions } from "./redisConnection";
 import type { RecordingJob, RecordingResult } from "./types";
 
@@ -21,14 +20,13 @@ export interface AddJobOptions {
 }
 
 /**
- * Enqueues a new recording job and returns the generated jobId.
+ * Enqueues a new recording job and returns the jobId.
  */
 export async function addRecordingJob(
+  jobId: string,
   url: string,
   options: AddJobOptions = {}
 ): Promise<string> {
-  const jobId = nanoid();
-
   const jobData: RecordingJob = {
     jobId,
     url,

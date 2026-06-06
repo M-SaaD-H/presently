@@ -1,316 +1,143 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "@/components/ui/toaster";
-import {
-  Video,
-  Download,
-  Loader2,
-  RotateCcw,
-  CirclePlay,
-  Sparkles,
-  Globe,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react"
+import { cn } from "@/lib/utils";
 
 type RecordingStatus = "idle" | "queued" | "processing" | "done" | "failed";
 
-interface RecordingState {
-  status: RecordingStatus;
-  jobId: string | null;
-  publicUrl: string | null;
-  error: string | null;
-}
+function GenerateDemoContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const jobIdFromQuery = searchParams.get("jobId");
 
-const POLL_INTERVAL_MS = 2000;
-
-export default function GeneratePage() {
   const [url, setUrl] = useState("");
-  const [recording, setRecording] = useState<RecordingState>({
-    status: "idle",
-    jobId: null,
-    publicUrl: null,
-    error: null,
-  });
+  const [status, setStatus] = useState<RecordingStatus>("idle");
 
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  // If we already have a jobId in the query params, we are polling
+  const isPolling = !!jobIdFromQuery;
 
-  // Polling
-
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-  }, []);
-
-  const pollStatus = useCallback(
-    async (jobId: string) => {
-      try {
-        const res = await fetch(`/api/record/${jobId}`);
-        if (!res.ok) {
-          const { message } = await res.json().catch(() => ({ message: "Unknown error" }));
-          throw new Error(message);
-        }
-        const data = await res.json() as {
-          status: RecordingStatus;
-          publicUrl?: string;
-          error?: string;
-        };
-
-        if (data.status === "done") {
-          stopPolling();
-          setRecording({
-            status: "done",
-            jobId,
-            publicUrl: data.publicUrl ?? `/api/download/${jobId}`,
-            error: null,
-          });
-          toast.success("Recording complete!", {
-            description: "Your demo video is ready to preview.",
-          });
-        } else if (data.status === "failed") {
-          stopPolling();
-          const errMsg = data.error ?? "Recording failed";
-          setRecording((prev) => ({
-            ...prev,
-            status: "failed",
-            error: errMsg,
-          }));
-          toast.error("Recording failed", { description: errMsg });
-        } else {
-          setRecording((prev) => ({ ...prev, status: data.status }));
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to check status";
-        stopPolling();
-        setRecording((prev) => ({ ...prev, status: "failed", error: msg }));
-        toast.error("Status check failed", { description: msg });
-      }
-    },
-    [stopPolling]
-  );
-
-  useEffect(() => {
-    if (recording.jobId && (recording.status === "queued" || recording.status === "processing")) {
-      stopPolling();
-      pollRef.current = setInterval(() => pollStatus(recording.jobId!), POLL_INTERVAL_MS);
-    }
-    return stopPolling;
-  }, [recording.jobId, recording.status, pollStatus, stopPolling]);
-
-  // ── Actions ────────────────────────────────────────────────────────────────
-
-  const handleRecord = async () => {
-    const trimmed = url.trim();
-    if (!trimmed) {
-      toast.warning("Please enter a URL");
+  const handleSubmit = async (e: React.SubmitEvent) => {
+    e.preventDefault();
+    if (!url) {
+      toast.error("URL is required.");
       return;
-    }
+    };
 
-    // Prepend https:// if the user typed a bare domain
-    const fullUrl = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-
-    try {
-      new URL(fullUrl);
-    } catch {
-      toast.error("Invalid URL", { description: "Please enter a valid website address." });
-      return;
-    }
-
-    setRecording({ status: "queued", jobId: null, publicUrl: null, error: null });
+    setStatus("queued");
 
     try {
       const res = await fetch("/api/record", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: fullUrl }),
+        body: JSON.stringify({ url }),
       });
 
-      const data = await res.json();
+      const json = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.message ?? "Failed to start recording");
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Failed to start generation");
       }
 
-      setRecording((prev) => ({ ...prev, jobId: data.jobId }));
-      toast.info("Recording started", {
-        description: "Your demo video is being recorded…",
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to start recording";
-      setRecording({ status: "failed", jobId: null, publicUrl: null, error: msg });
-      toast.error("Could not start recording", { description: msg });
+      // Add jobId to URL query params
+      router.push(`?jobId=${json.data.jobId}`);
+    } catch (err: any) {
+      toast.error(err.message);
+      setStatus("failed");
     }
   };
 
-  const handleReset = () => {
-    stopPolling();
-    setRecording({ status: "idle", jobId: null, publicUrl: null, error: null });
-  };
+  useEffect(() => {
+    if (!jobIdFromQuery || status === "done" || status === "failed") return;
 
-  const isActive = recording.status === "queued" || recording.status === "processing";
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/record/${jobIdFromQuery}`);
+        const json = await res.json();
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+        if (json.success && json.data) {
+          const jobStatus = json.data.status;
+
+          if (jobStatus === "done") {
+            toast.success("Demo generated successfully!")
+            setStatus("done");
+            clearInterval(interval);
+            router.push(`/demo/${jobIdFromQuery}`);
+          } else if (jobStatus === "failed") {
+            toast.error("Generation failed.")
+            setStatus("failed");
+            clearInterval(interval);
+          } else {
+            setStatus(jobStatus); // queued or processing
+          }
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [jobIdFromQuery, status, router]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <main className="relative z-10 mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-10 p-6 mt-24">
-
-        {/* Hero */}
-        <header className="flex flex-col items-center gap-4 text-center">
-          <h1 className="bg-gradient-to-br from-foreground via-foreground/90 to-foreground/60 bg-clip-text text-5xl font-bold tracking-tight text-transparent sm:text-6xl">
-            Record your
-            <br />
-            website demo
+    <div className="flex flex-col items-center justify-center px-4 my-26">
+      <div className="w-full max-w-xl mx-auto space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="font-serif text-3xl md:text-4xl text-foreground">
+            Create your demo
           </h1>
-          <p className="max-w-md text-base leading-relaxed text-muted-foreground">
-            Paste any URL and get a smooth, human-like demo video - complete with
-            natural scrolling and animation capture. Ready in seconds.
+          <p className="text-muted-foreground">
+            Enter any public URL to generate a high-quality walkthrough video.
           </p>
-        </header>
+        </div>
 
-        {/* Input Card */}
-        <section
-          aria-label="Recording controls"
-          className="w-full rounded-2xl border border-border bg-card/80 p-6 shadow-xl shadow-black/5 backdrop-blur-md"
-        >
-          {/* URL */}
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="flex w-full flex-1 gap-2">
-              <Globe className="absolute left-8 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="url-input"
-                type="url"
-                placeholder="https://example.com"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !isActive && handleRecord()}
-                disabled={isActive}
-                className="h-10 pl-9 text-sm"
-                aria-label="Website URL"
-              />
-            </div>
-
-            {/* Action button */}
-            <div className="flex justify-end">
-              {recording.status === "done" || recording.status === "failed" ? (
-                <Button
-                  id="reset-button"
-                  variant="outline"
-                  onClick={handleReset}
-                  className="gap-2 h-full"
-                >
-                  <RotateCcw className="size-4" />
-                  Record another
-                </Button>
-              ) : (
-                <Button
-                  id="record-button"
-                  onClick={handleRecord}
-                  disabled={isActive}
-                  className="h-full px-4"
-                >
-                  {isActive ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Video className="size-4" />
-                  )}
-                  {isActive ? "Recording…" : "Record"}
-                </Button>
-              )}
-            </div>
-          </div>
-
-
-          {/* Status indicator */}
-          {isActive && (
-            <div className="mt-5" role="status" aria-live="polite">
-              <StatusBar status={recording.status} />
-            </div>
-          )}
-        </section>
-
-        {/* Result: Video Player */}
-        {recording.status === "done" && recording.publicUrl && (
-          <section
-            aria-label="Recording result"
-            className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500"
-          >
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl shadow-black/10">
-              {/* Video */}
-              <div className="relative bg-black">
-                <video
-                  ref={videoRef}
-                  id="result-video"
-                  src={recording.publicUrl}
-                  controls
-                  autoPlay
-                  className="aspect-video w-full"
-                  aria-label="Recorded website demo"
+        <div className="border border-border/50 rounded-2xl p-6 md:p-8 shadow-sm bg-background">
+          {isPolling ? (
+            <StatusBar status={status} />
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="url" className="text-sm font-medium text-foreground">
+                  Website URL
+                </label>
+                <Input
+                  id="url"
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  required
+                  disabled={!!jobIdFromQuery}
+                  className="h-12 bg-surface/50 border-border/50 focus-visible:ring-1 focus-visible:ring-foreground/20"
                 />
-                <div className="pointer-events-none absolute inset-0 rounded-t-2xl ring-1 ring-inset ring-white/5" />
               </div>
 
-              {/* Footer */}
-              <div className="flex items-center justify-between gap-4 border-t border-border px-5 py-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle2 className="size-4 text-emerald-500" />
-                  Recording complete
-                </div>
-                <a
-                  id="download-button"
-                  href={`/api/download/${recording.jobId}`}
-                  download={`presently-${recording.jobId}.mp4`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
-                >
-                  <Download className="size-4" />
-                  Download MP4
-                </a>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Result: Error */}
-        {recording.status === "failed" && recording.error && (
-          <section
-            aria-label="Recording error"
-            className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500"
-          >
-            <div className="flex flex-col gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
-              <div className="flex items-start gap-3">
-                <XCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium text-foreground">
-                    Recording failed
-                  </p>
-                  <p className="text-sm text-muted-foreground">{recording.error}</p>
-                </div>
-              </div>
               <Button
-                id="retry-button"
-                variant="outline"
-                size="sm"
-                onClick={handleRecord}
-                className="self-start gap-2"
+                type="submit"
+                size="lg"
+                disabled={status === "queued"}
+                className="w-full h-12 rounded-lg text-base"
               >
-                <RotateCcw className="size-3.5" />
-                Try again
+                {status === "queued" ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Initializing...
+                  </>
+                ) : (
+                  "Generate Video"
+                )}
               </Button>
-            </div>
-          </section>
-        )}
-      </main>
+            </form>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
-
-// Status Bar Component
 
 function StatusBar({ status }: { status: RecordingStatus }) {
   const steps = [
@@ -322,25 +149,28 @@ function StatusBar({ status }: { status: RecordingStatus }) {
   const currentIdx = steps.findIndex((s) => s.key === status);
   const activeIdx = currentIdx === -1 ? 0 : currentIdx;
 
+  console.log("currentIdx:", currentIdx);
+  console.log("activeIdx:", activeIdx);
+
   return (
     <div className="flex flex-col gap-3">
       {/* Step indicators */}
-      <div className="flex items-center gap-0">
+      <div className="flex items-center justify-between">
         {steps.map((step, i) => {
           const isComplete = i < activeIdx;
           const isActive = i === activeIdx;
           return (
-            <div key={step.key} className="flex flex-1 items-center">
+            <div key={step.key} className="flex items-center">
               <div className="flex flex-col items-center gap-1.5">
                 <div
-                  className={[
+                  className={cn(
                     "flex size-6 items-center justify-center rounded-full text-xs font-semibold transition-all",
                     isComplete
-                      ? "bg-emerald-500 text-white"
+                      ? "bg-primary text-primary-foreground"
                       : isActive
-                        ? "bg-violet-600 text-white ring-4 ring-violet-600/25"
+                        ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
                         : "bg-muted text-muted-foreground",
-                  ].join(" ")}
+                  )}
                 >
                   {isComplete ? (
                     <CheckCircle2 className="size-3.5" />
@@ -351,20 +181,20 @@ function StatusBar({ status }: { status: RecordingStatus }) {
                   )}
                 </div>
                 <span
-                  className={[
+                  className={cn(
                     "text-xs font-medium",
                     isActive ? "text-foreground" : "text-muted-foreground",
-                  ].join(" ")}
+                  )}
                 >
                   {step.label}
                 </span>
               </div>
               {i < steps.length - 1 && (
                 <div
-                  className={[
-                    "mb-4 h-px flex-1 transition-colors",
-                    i < activeIdx ? "bg-emerald-500" : "bg-border",
-                  ].join(" ")}
+                  className={cn(
+                    "mb-4 flex-1 transition-colors",
+                    i < activeIdx ? "bg-primary" : "bg-border",
+                  )}
                 />
               )}
             </div>
@@ -375,18 +205,18 @@ function StatusBar({ status }: { status: RecordingStatus }) {
       {/* Animated progress bar */}
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className={[
+          className={cn(
             "h-full rounded-full transition-all duration-700",
             status === "processing"
-              ? "animate-pulse bg-gradient-to-r from-violet-600 to-fuchsia-500"
-              : "bg-gradient-to-r from-violet-600 to-fuchsia-500",
-          ].join(" ")}
+              ? "animate-pulse bg-primary"
+              : "bg-primary",
+          )}
           style={{
             width:
               status === "queued"
-                ? "15%"
+                ? "4%"
                 : status === "processing"
-                  ? "70%"
+                  ? "50%"
                   : "100%",
           }}
           role="progressbar"
@@ -404,5 +234,19 @@ function StatusBar({ status }: { status: RecordingStatus }) {
           : "Capturing your website — this takes about a minute"}
       </p>
     </div>
+  );
+}
+
+export default function GenerateDemoPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center p-24">
+          <Loader2 className="animate-spin w-8 h-8 text-primary" />
+        </div>
+      }
+    >
+      <GenerateDemoContent />
+    </Suspense>
   );
 }

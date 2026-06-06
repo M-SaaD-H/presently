@@ -15,6 +15,8 @@ import { getRedisConnectionOptions } from "./redisConnection";
 import { recordWebsite } from "./recorder";
 import type { RecordingJob, RecordingResult } from "./types";
 import { QUEUE_NAME } from "./queue";
+import { connectDB } from "@/lib/db";
+import { Job } from "@/models/job";
 
 const MAX_WORKERS = parseInt(process.env.MAX_CONCURRENT_WORKERS ?? "3", 10);
 
@@ -26,6 +28,12 @@ function createWorker(): Worker<RecordingJob, RecordingResult, string> {
       console.log(`[worker] Starting job ${jobId} — ${url}`);
 
       const result = await recordWebsite(job.data);
+
+      await connectDB();
+      await Job.findByIdAndUpdate(jobId, {
+        status: "completed",
+        publicUrl: result.publicUrl,
+      });
 
       console.log(
         `[worker] Completed job ${jobId} — ${result.fileSizeBytes} bytes, ` +
@@ -40,14 +48,23 @@ function createWorker(): Worker<RecordingJob, RecordingResult, string> {
     }
   );
 
-  worker.on("failed", (job, err) => {
+  worker.on("failed", async (job, err) => {
     const jobId = job?.data?.jobId ?? job?.id ?? "unknown";
     const url = job?.data?.url ?? "unknown";
-    // Log a clean single-line message — not a full stack trace — so log
-    // aggregators can parse it easily
+    
     console.error(
       `[worker] Failed job ${jobId} — ${url} — ${err.message}`
     );
+
+    try {
+      await connectDB();
+      await Job.findByIdAndUpdate(jobId, {
+        status: "failed",
+        error: err.message,
+      });
+    } catch (dbErr) {
+      console.error(`[worker] Failed to update DB for failed job ${jobId}`, dbErr);
+    }
   });
 
   worker.on("error", (err) => {

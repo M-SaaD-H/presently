@@ -11,7 +11,10 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (url.pathname.startsWith("/demo") && !token) {
+  if ((url.pathname.startsWith("/demo") ||
+    url.pathname.startsWith("/generate")) &&
+    !token
+  ) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
@@ -19,5 +22,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/demo", "/demo/:path*"]
+  matcher: ["/login", "/demo", "/demo/:path*", "/generate"]
 }

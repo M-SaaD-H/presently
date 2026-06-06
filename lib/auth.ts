@@ -40,6 +40,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return false;
       }
     },
+    async jwt({ token, user }) {
+      if (user) {
+        await connectDB();
+        const dbUser = await User.findOne({ email: user.email });
+        if (dbUser) {
+          token.id = dbUser._id.toString();
+        }
+      } else if (!token.id && token.email) {
+        await connectDB();
+        const dbUser = await User.findOne({ email: token.email });
+        if (dbUser) {
+          token.id = dbUser._id.toString();
+        }
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id as string;
+      }
+      return session;
+    },
     authorized: async ({ auth }) => {
       // Logged in users are authenticated, otherwise false
       return !!auth;
