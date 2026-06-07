@@ -18,7 +18,7 @@ const OUTPUT_DIR = path.resolve(
 );
 
 /**
- * Persists the recorded MP4 to permanent storage.
+ * Persists the recorded MP4 to permanent storage (local or cloud).
  * Returns the public URL to access the video.
  */
 export async function saveVideo(
@@ -62,11 +62,13 @@ async function uploadToCloudinary(localPath: string, jobId: string): Promise<str
       "Cloudinary upload requires CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME/CLOUDINARY_API_KEY/CLOUDINARY_API_SECRET env vars."
     );
   }
-
+  
   try {
     const result = await cloudinary.uploader.upload(localPath, {
       resource_type: "video",
       public_id: `presently/recordings/${jobId}`,
+      folder: "presently/recordings",
+      upload_preset: "presently-v1-preset"
     });
 
     // The Cloudinary SDK can sometimes resolve the promise slightly before

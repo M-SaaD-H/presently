@@ -71,6 +71,7 @@ function GenerateDemoContent() {
             toast.error("Generation failed.")
             setStatus("failed");
             clearInterval(interval);
+            router.push("/dashboard");
           } else {
             setStatus(jobStatus); // queued or processing
           }

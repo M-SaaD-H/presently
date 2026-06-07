@@ -2,7 +2,7 @@
  * BullMQ worker that processes recording jobs.
  *
  * Can be run as a standalone process for production:
- *   node --require tsx/cjs lib/video/worker.ts
+ *   node --require tsx/cjs worker/video/worker.ts
  *
  * Or imported by Next.js API routes in development for convenience.
  *
@@ -17,6 +17,9 @@ import type { RecordingJob, RecordingResult } from "./types";
 import { QUEUE_NAME } from "./queue";
 import { connectDB } from "@/lib/db";
 import { Job } from "@/models/job";
+
+// import { config } from "dotenv";
+// config({ path: "../../.env.local" });
 
 const MAX_WORKERS = parseInt(process.env.MAX_CONCURRENT_WORKERS ?? "3", 10);
 
@@ -85,7 +88,7 @@ export function getWorker(): Worker<RecordingJob, RecordingResult> {
   return workerInstance;
 }
 
-// ── Standalone entrypoint ────────────────────────────────────────────────────
+// Standalone entrypoint
 // When run directly (not imported), start the worker and keep the process alive.
 if (require.main === module) {
   const worker = getWorker();

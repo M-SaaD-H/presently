@@ -47,7 +47,7 @@ export function UserNav({ user }: UserNavProps) {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/demo")}>
+          <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/dashboard")}>
             <Presentation className="mr-2 h-4 w-4" />
             <span>My Demos</span>
           </DropdownMenuItem>

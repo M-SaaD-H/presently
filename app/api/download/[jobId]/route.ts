@@ -12,8 +12,8 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import { ApiError } from "@/utils/apiError";
 import { asyncHandler } from "@/utils/asyncHandler";
-import { getJobStatus } from "@/lib/video/queue";
-import { getLocalOutputPath } from "@/lib/video/storage";
+import { getJobStatus } from "@/worker/video/queue";
+import { getLocalOutputPath } from "@/worker/video/storage";
 
 const STORAGE_TYPE = process.env.STORAGE_TYPE ?? "local";
 

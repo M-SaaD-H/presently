@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ApiError } from "@/utils/apiError";
 import { ApiResponse } from "@/utils/apiResponse";
 import { asyncHandler } from "@/utils/asyncHandler";
-import { addRecordingJob } from "@/lib/video/queue";
+import { addRecordingJob } from "@/worker/video/queue";
 import { connectDB } from "@/lib/db";
 import { Job } from "@/models/job";
 import { auth } from "@/lib/auth";

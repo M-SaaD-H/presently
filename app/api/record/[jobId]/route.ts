@@ -15,7 +15,7 @@ import { NextResponse } from "next/server";
 import { ApiError } from "@/utils/apiError";
 import { ApiResponse } from "@/utils/apiResponse";
 import { asyncHandler } from "@/utils/asyncHandler";
-import { getJobStatus } from "@/lib/video/queue";
+import { getJobStatus } from "@/worker/video/queue";
 
 type Ctx = { params: Promise<{ jobId: string }> };
 
@@ -35,12 +35,12 @@ export const GET = asyncHandler<Ctx>(
 
     return NextResponse.json(
       new ApiResponse(
-        200, 
+        200,
         {
           status,
           publicUrl: result?.publicUrl,
           error,
-        }, 
+        },
         "Job status fetched successfully"
       ),
       { status: 200 }

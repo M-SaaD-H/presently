@@ -31,11 +31,11 @@ import type { RecordingJob, RecordingResult, ScrollOptions } from "./types";
 const CHROME_EXECUTABLE =
   process.env.CHROME_EXECUTABLE ?? "/usr/bin/google-chrome-stable";
 
-/** Milliseconds to wait after xdpyinfo reports Xvfb is ready before launching Chrome */
+// Milliseconds to wait after xdpyinfo reports Xvfb is ready before launching Chrome
 const XVFB_READY_POLL_INTERVAL_MS = 200;
 const XVFB_READY_TIMEOUT_MS = 15_000;
 
-/** Resolution must match the FFmpeg x11grab capture size in ffmpeg.ts */
+// Resolution must match the FFmpeg x11grab capture size in ffmpeg.ts
 const VIEWPORT_WIDTH = 1280;
 const VIEWPORT_HEIGHT = 800;
 
@@ -93,6 +93,15 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
     });
 
     const page = browserContext.pages()[0] ?? await browserContext.newPage();
+
+    // esbuild/tsx injects a `__name` helper into functions. We must define it globally
+    // inside the browser so that transpiled `page.evaluate()` closures do not throw ReferenceError.
+    await browserContext.addInitScript(`
+      window.__name = function (fn, name) {
+        Object.defineProperty(fn, "name", { value: name, configurable: true });
+        return fn;
+      };
+    `);
 
     await page.goto(job.url, {
       waitUntil: "load",
@@ -156,9 +165,7 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
 
 /* ========================= Helpers ========================= */
 
-/**
- * Spawns a child process running Xvfb on the given display.
- */
+// Spawns a child process running Xvfb on the given display.
 function spawnXvfb(display: number): ChildProcess {
   const proc = spawn(
     "Xvfb",
@@ -176,10 +183,8 @@ function spawnXvfb(display: number): ChildProcess {
   return proc;
 }
 
-/**
- * Polls xdpyinfo until Xvfb accepts connections on the given display.
- * This is more reliable than a fixed sleep because Xvfb startup time varies.
- */
+// Polls xdpyinfo until Xvfb accepts connections on the given display.
+// This is more reliable than a fixed sleep because Xvfb startup time varies.
 async function waitForXvfb(display: number): Promise<void> {
   const deadline = Date.now() + XVFB_READY_TIMEOUT_MS;
   const displayStr = `:${display}`;

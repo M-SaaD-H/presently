@@ -152,9 +152,9 @@ async function smoothScrollTo(
           const distance = targetY - current;
 
           if (lastScrollY !== null && current === lastScrollY) {
-             stuckFrames++;
+            stuckFrames++;
           } else {
-             stuckFrames = 0;
+            stuckFrames = 0;
           }
 
           // Settled - snap to target and resolve

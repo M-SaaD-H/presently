@@ -6,9 +6,9 @@
  *   2. Queue path: job enqueued via addRecordingJob(), polled until done
  */
 
-import { recordWebsite } from "../lib/video/recorder";
-import { addRecordingJob, getJobStatus } from "../lib/video/queue";
-import { getWorker } from "../lib/video/worker";
+import { recordWebsite } from "../worker/video/recorder";
+import { addRecordingJob, getJobStatus } from "../worker/video/queue";
+import { getWorker } from "../worker/video/worker";
 import { nanoid } from "nanoid";
 
 const TEST_URL = "https://heysaad.me/writing/chasing-bottlenecks-in-ember";
@@ -40,7 +40,7 @@ async function testQueue(): Promise<void> {
   // Start the worker so it processes jobs
   getWorker();
 
-  const jobId = await addRecordingJob(TEST_URL);
+  const jobId = await addRecordingJob("123", TEST_URL);
   console.log(`Job enqueued: ${jobId}`);
 
   // Poll until done or failed
