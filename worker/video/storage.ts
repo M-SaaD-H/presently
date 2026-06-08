@@ -1,16 +1,16 @@
 /**
  * File output abstraction.
  *
- * STORAGE_TYPE=local: copies the recording to OUTPUT_DIR and returns a
- *                     relative URL path (served by Next.js /api/download).
- * STORAGE_TYPE=cloudinary: uploads to Cloudinary and returns the public CDN URL.
+ * STORAGE_TYPE=local:    copies the recording to OUTPUT_DIR and returns a
+ *                        relative URL path (served by Next.js /api/download).
+ * STORAGE_TYPE=supabase: uploads to supabase storage and returns the public CDN URL.
  */
 
 import fs from "fs/promises";
 import path from "path";
 import { createReadStream, createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
-import { v2 as cloudinary } from "cloudinary";
+import { supabase } from "../utils/supabase";
 
 const STORAGE_TYPE = process.env.STORAGE_TYPE ?? "local";
 const OUTPUT_DIR = path.resolve(
@@ -49,39 +49,22 @@ async function saveLocally(localPath: string, jobId: string): Promise<string> {
   return `/api/download/${jobId}`;
 }
 
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
 async function uploadToCloudinary(localPath: string, jobId: string): Promise<string> {
-  if (!process.env.CLOUDINARY_URL && !process.env.CLOUDINARY_CLOUD_NAME) {
-    throw new Error(
-      "Cloudinary upload requires CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME/CLOUDINARY_API_KEY/CLOUDINARY_API_SECRET env vars."
-    );
-  }
-  
   try {
-    const result = await cloudinary.uploader.upload(localPath, {
-      resource_type: "video",
-      public_id: `presently/recordings/${jobId}`,
-      folder: "presently/recordings",
-      upload_preset: "presently-v1-preset"
+    const file = await fs.readFile(localPath);
+    const { data, error } = await supabase.storage.from("recordings").upload(`recordings/${jobId}.mp4`, file, {
+      contentType: "video/mp4",
+      cacheControl: "3600",
+      upsert: true
     });
+    if (error) {
+      throw error;
+    }
 
-    // The Cloudinary SDK can sometimes resolve the promise slightly before
-    // fully closing the file descriptor internally. If we unlink immediately,
-    // Bun throws an EBADF (bad file descriptor) error on close.
-    // We defer the cleanup slightly to avoid this race condition.
-    setTimeout(() => {
-      fs.unlink(localPath).catch(() => {});
-    }, 1000);
-
-    return result.secure_url;
+    const { data: publicUrlData } = supabase.storage.from("recordings").getPublicUrl(data.path);
+    return publicUrlData.publicUrl;
   } catch (error) {
-    console.error("Cloudinary upload failed:", error);
+    console.error("Supabase upload failed:", error);
     throw error;
   }
 }

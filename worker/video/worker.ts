@@ -96,11 +96,31 @@ if (require.main === module) {
     `[worker] Started — concurrency: ${MAX_WORKERS}, queue: ${QUEUE_NAME}`
   );
 
+  let shuttingDown = false;
+  
   // Graceful shutdown on SIGTERM/SIGINT
   async function shutdown(signal: string): Promise<void> {
-    console.log(`[worker] Received ${signal}, shutting down gracefully…`);
-    await worker.close();
-    process.exit(0);
+    if (shuttingDown) {
+      console.log(`\n[worker] Received ${signal} again, forcing exit immediately…`);
+      process.exit(1);
+    }
+    shuttingDown = true;
+    console.log(`\n[worker] Received ${signal}, shutting down gracefully… (Press Ctrl+C again to force exit)`);
+    
+    // Give active jobs some time to finish, but don't hang forever
+    const forceExitTimer = setTimeout(() => {
+      console.log(`[worker] Graceful shutdown timed out. Forcing exit…`);
+      process.exit(1);
+    }, 10000); // 10 seconds timeout
+    
+    try {
+      await worker.close();
+      clearTimeout(forceExitTimer);
+      process.exit(0);
+    } catch (err) {
+      console.error(`[worker] Error during shutdown:`, err);
+      process.exit(1);
+    }
   }
 
   process.on("SIGTERM", () => shutdown("SIGTERM"));

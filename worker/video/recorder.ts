@@ -152,11 +152,11 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
   const { size } = await fs.stat(tempPath);
 
   const publicUrl = await saveVideo(tempPath, job.jobId);
-  const isCloudinary = publicUrl.startsWith("http");
+  const isCloudStorage = publicUrl.startsWith("http");
 
   return {
     jobId: job.jobId,
-    outputPath: isCloudinary ? publicUrl : getLocalOutputPath(job.jobId),
+    outputPath: isCloudStorage ? publicUrl : getLocalOutputPath(job.jobId),
     publicUrl,
     durationSeconds: recordedDurationSeconds,
     fileSizeBytes: size,

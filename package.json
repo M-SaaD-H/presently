@@ -7,13 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "worker": "bun --env-file=.env.local worker/video/worker.ts"
+    "worker": "bun worker/video/worker.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@supabase/supabase-js": "^2.107.0",
     "bullmq": "^5.78.0",
     "class-variance-authority": "^0.7.1",
-    "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
     "ioredis": "^5.11.0",
     "lucide-react": "^1.17.0",
