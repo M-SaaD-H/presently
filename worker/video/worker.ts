@@ -25,11 +25,13 @@ function createWorker(): Worker<RecordingJob, RecordingResult, string> {
     QUEUE_NAME,
     async (job) => {
       const { jobId, url } = job.data;
+      
       console.log(`[worker] Starting job ${jobId} - ${url}`);
+      await connectDB();
+      await Job.findByIdAndUpdate(jobId, { status: "processing" });
 
       const result = await recordWebsite(job.data);
 
-      await connectDB();
       await Job.findByIdAndUpdate(jobId, {
         status: "completed",
         publicUrl: result.publicUrl,
