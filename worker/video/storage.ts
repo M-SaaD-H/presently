@@ -1,9 +1,9 @@
 /**
  * File output abstraction.
  *
- * STORAGE_TYPE=local:    copies the recording to OUTPUT_DIR and returns a
- *                        relative URL path (served by Next.js /api/download).
- * STORAGE_TYPE=supabase: uploads to supabase storage and returns the public CDN URL.
+ * STORAGE_TYPE=local: copies the recording to OUTPUT_DIR and returns a
+ *                     relative URL path (served by Next.js /api/download).
+ * STORAGE_TYPE=cloud: uploads to supabase storage and returns the public CDN URL.
  */
 
 import fs from "fs/promises";
@@ -25,8 +25,8 @@ export async function saveVideo(
   localPath: string,
   jobId: string
 ): Promise<string> {
-  if (STORAGE_TYPE === "cloudinary") {
-    return uploadToCloudinary(localPath, jobId);
+  if (STORAGE_TYPE === "cloud") {
+    return uploadToCloud(localPath, jobId);
   }
   return saveLocally(localPath, jobId);
 }
@@ -49,7 +49,7 @@ async function saveLocally(localPath: string, jobId: string): Promise<string> {
   return `/api/download/${jobId}`;
 }
 
-async function uploadToCloudinary(localPath: string, jobId: string): Promise<string> {
+async function uploadToCloud(localPath: string, jobId: string): Promise<string> {
   try {
     const file = await fs.readFile(localPath);
     const { data, error } = await supabase.storage.from("recordings").upload(`recordings/${jobId}.mp4`, file, {

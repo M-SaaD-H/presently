@@ -2,7 +2,6 @@
  * GET /api/download/[jobId]
  *
  * Streams the recorded MP4 directly (local storage) or redirects to the CDN
- * URL (S3/R2 storage).
  *
  * Returns 404 if the job doesn't exist or hasn't completed yet.
  */
@@ -37,8 +36,7 @@ export const GET = asyncHandler<Ctx>(
       throw new ApiError(410, "Recording failed.");
     }
 
-    // S3/R2: redirect to the public CDN URL
-    if (STORAGE_TYPE === "s3" && result?.publicUrl) {
+    if (STORAGE_TYPE === "cloud" && result?.publicUrl) {
       return NextResponse.redirect(result.publicUrl, { status: 302 });
     }
 

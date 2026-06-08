@@ -13,7 +13,7 @@ export interface RecordingResult {
   jobId: string;
   /** Absolute path to the local MP4 file */
   outputPath: string;
-  /** Public-facing URL (local path or S3 URL depending on STORAGE_TYPE) */
+  /** Public-facing URL */
   publicUrl: string;
   /** Measured duration of the recording in seconds */
   durationSeconds: number;
