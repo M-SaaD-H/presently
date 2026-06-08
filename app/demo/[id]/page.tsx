@@ -78,17 +78,17 @@ export default function DemoResultPage({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" className="gap-2">
+            {/* <Button variant="outline" size="sm" className="gap-2">
               <Share2 className="w-4 h-4" />
               Share
             </Button>
             <Button variant="outline" size="sm" className="gap-2">
               <RefreshCw className="w-4 h-4" />
               Regenerate
-            </Button>
+            </Button> */}
             {isCompleted && job.publicUrl && (
-              <a href={job.publicUrl} download target="_blank" rel="noreferrer">
-                <Button size="sm" className="gap-2">
+              <a href={`${job.publicUrl}${job.publicUrl.includes('?') ? '&' : '?'}download=`} target="_blank" rel="noreferrer">
+                <Button className="gap-2">
                   <Download className="w-4 h-4" />
                   Download
                 </Button>
