@@ -19,7 +19,6 @@ export function JobList({ jobs }: { jobs: Job[] }) {
       <Table>
         <TableHeader>
           <TableRow className="border-border/50 hover:bg-transparent">
-            <TableHead className="w-[120px]">Thumbnail</TableHead>
             <TableHead>Demo title</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Created date</TableHead>
@@ -46,40 +45,18 @@ export function JobList({ jobs }: { jobs: Job[] }) {
 function JobRow({ job }: { job: Job }) {
   const isCompleted = job.status === "completed" || job.status === "done";
   const isFailed = job.status === "failed";
-  const thumbnailUrl = getThumbnailUrl(job.publicUrl);
 
   return (
     <TableRow className="border-border/50 group">
       <TableCell>
-        <Link href={`/demo/${job._id}`} className="block">
-          <div className="w-20 h-12 bg-muted/30 rounded-md relative flex items-center justify-center overflow-hidden shrink-0 group-hover:opacity-90 transition-opacity">
-            {isCompleted ? (
-              <>
-                {thumbnailUrl && (
-                  <img
-                    src={thumbnailUrl}
-                    alt="Thumbnail"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                )}
-              </>
-            ) : isFailed ? (
-              <AlertCircle className="w-4 h-4 text-destructive/50" />
-            ) : (
-              <Loader2 className="w-4 h-4 text-primary/50 animate-spin" />
-            )}
-          </div>
-        </Link>
-      </TableCell>
-      <TableCell>
-        <div className="flex flex-col">
+        <Link href={`/demo/${job._id}`} className="flex flex-col">
           <span className="font-medium truncate max-w-[200px]" title={job.url}>
             {new URL(job.url).hostname}
           </span>
           <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={job.url}>
             {job.url}
           </span>
-        </div>
+        </Link>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
@@ -124,14 +101,4 @@ export const formatDate = (dateString: string) => {
     day: "numeric",
     year: "numeric",
   }).format(date);
-};
-
-const getThumbnailUrl = (publicUrl?: string) => {
-  if (!publicUrl) return null;
-  if (publicUrl.includes("cloudinary.com")) {
-    return publicUrl
-      .replace("/upload/", "/upload/so_2/")
-      .replace(/\.mp4$/i, ".jpg");
-  }
-  return null;
 };
