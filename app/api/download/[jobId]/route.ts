@@ -34,7 +34,7 @@ export const GET = asyncHandler<Ctx>(
     }
 
     if (status === "failed") {
-      throw new ApiError(410, "Recording failed — no file to download");
+      throw new ApiError(410, "Recording failed.");
     }
 
     // S3/R2: redirect to the public CDN URL

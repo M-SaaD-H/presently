@@ -18,9 +18,6 @@ import { QUEUE_NAME } from "./queue";
 import { connectDB } from "@/lib/db";
 import { Job } from "@/models/job";
 
-// import { config } from "dotenv";
-// config({ path: "../../.env.local" });
-
 const MAX_WORKERS = parseInt(process.env.MAX_CONCURRENT_WORKERS ?? "3", 10);
 
 function createWorker(): Worker<RecordingJob, RecordingResult, string> {
@@ -28,7 +25,7 @@ function createWorker(): Worker<RecordingJob, RecordingResult, string> {
     QUEUE_NAME,
     async (job) => {
       const { jobId, url } = job.data;
-      console.log(`[worker] Starting job ${jobId} — ${url}`);
+      console.log(`[worker] Starting job ${jobId} - ${url}`);
 
       const result = await recordWebsite(job.data);
 
@@ -40,8 +37,7 @@ function createWorker(): Worker<RecordingJob, RecordingResult, string> {
       });
 
       console.log(
-        `[worker] Completed job ${jobId} — ${result.fileSizeBytes} bytes, ` +
-          `publicUrl: ${result.publicUrl}`
+        `[worker] Completed job ${jobId} - publicUrl: ${result.publicUrl}`
       );
 
       return result;
@@ -57,7 +53,7 @@ function createWorker(): Worker<RecordingJob, RecordingResult, string> {
     const url = job?.data?.url ?? "unknown";
     
     console.error(
-      `[worker] Failed job ${jobId} — ${url} — ${err.message}`
+      `[worker] Failed job ${jobId} - ${url}.\nError: ${err.message}`
     );
 
     try {
@@ -78,7 +74,7 @@ function createWorker(): Worker<RecordingJob, RecordingResult, string> {
   return worker;
 }
 
-// Singleton worker instance — only one per process
+// Singleton worker instance, only one per process
 let workerInstance: Worker<RecordingJob, RecordingResult> | null = null;
 
 export function getWorker(): Worker<RecordingJob, RecordingResult> {
@@ -93,7 +89,7 @@ export function getWorker(): Worker<RecordingJob, RecordingResult> {
 if (require.main === module) {
   const worker = getWorker();
   console.log(
-    `[worker] Started — concurrency: ${MAX_WORKERS}, queue: ${QUEUE_NAME}`
+    `[worker] Started - concurrency: ${MAX_WORKERS}, queue: ${QUEUE_NAME}`
   );
 
   let shuttingDown = false;
@@ -101,15 +97,15 @@ if (require.main === module) {
   // Graceful shutdown on SIGTERM/SIGINT
   async function shutdown(signal: string): Promise<void> {
     if (shuttingDown) {
-      console.log(`\n[worker] Received ${signal} again, forcing exit immediately…`);
+      console.log(`\n[worker] Received ${signal} again, forcing exit immediately`);
       process.exit(1);
     }
     shuttingDown = true;
-    console.log(`\n[worker] Received ${signal}, shutting down gracefully… (Press Ctrl+C again to force exit)`);
+    console.log(`\n[worker] Received ${signal}, shutting down gracefully... (Press Ctrl+C again to force exit)`);
     
     // Give active jobs some time to finish, but don't hang forever
     const forceExitTimer = setTimeout(() => {
-      console.log(`[worker] Graceful shutdown timed out. Forcing exit…`);
+      console.log(`[worker] Graceful shutdown timed out. Forcing exit.`);
       process.exit(1);
     }, 10000); // 10 seconds timeout
     

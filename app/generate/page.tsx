@@ -150,9 +150,6 @@ function StatusBar({ status }: { status: RecordingStatus }) {
   const currentIdx = steps.findIndex((s) => s.key === status);
   const activeIdx = currentIdx === -1 ? 0 : currentIdx;
 
-  console.log("currentIdx:", currentIdx);
-  console.log("activeIdx:", activeIdx);
-
   return (
     <div className="flex flex-col gap-3">
       {/* Step indicators */}
@@ -232,7 +229,7 @@ function StatusBar({ status }: { status: RecordingStatus }) {
       <p className="text-center text-xs text-muted-foreground">
         {status === "queued"
           ? "Waiting for a recording slot…"
-          : "Capturing your website — this takes about a minute"}
+          : "Capturing your website, this takes about a minute"}
       </p>
     </div>
   );

@@ -42,7 +42,7 @@ export const POST = asyncHandler(async (req: NextRequest) => {
   try {
     parsedUrl = new URL(url);
   } catch {
-    throw new ApiError(400, "Invalid URL — must include http:// or https://");
+    throw new ApiError(400, "URL must include http:// or https://");
   }
 
   if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
