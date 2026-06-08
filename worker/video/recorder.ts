@@ -26,7 +26,7 @@ import { acquireDisplay, releaseDisplay } from "./displayPool";
 import { startRecording, stopRecording } from "./ffmpeg";
 import { runScrollSession } from "./scroller";
 import { saveVideo } from "./storage";
-import type { RecordingJob, RecordingResult, ScrollOptions } from "./types";
+import type { RecordingJob, RecordingResult, RecordingOptions } from "./types";
 
 const CHROME_EXECUTABLE =
   process.env.CHROME_EXECUTABLE ?? "/usr/bin/google-chrome-stable";
@@ -35,9 +35,25 @@ const CHROME_EXECUTABLE =
 const XVFB_READY_POLL_INTERVAL_MS = 200;
 const XVFB_READY_TIMEOUT_MS = 15_000;
 
-// Resolution must match the FFmpeg x11grab capture size in ffmpeg.ts
-const VIEWPORT_WIDTH = 1280;
-const VIEWPORT_HEIGHT = 800;
+const DEFAULT_ARGS = [
+  // Force X11 mode so Chrome works inside the Xvfb display on Wayland
+  "--ozone-platform=x11",
+  // Disable features that can interfere with smooth rendering in a VM display
+  "--disable-dev-shm-usage",
+  "--disable-software-rasterizer",
+  // Ensure animations run at full speed — not throttled for background tabs
+  "--disable-background-timer-throttling",
+  "--disable-renderer-backgrounding",
+  "--disable-backgrounding-occluded-windows",
+  // Keep a consistent window size matching the FFmpeg capture resolution
+  "--window-position=0,0",
+  "--hide-scrollbars",
+  // // For full screen mode
+  // "--kiosk",
+  // `--window-size=${VIEWPORT_WIDTH},${VIEWPORT_HEIGHT}`,
+  // // For dark mode
+  // "--force-dark-mode"
+]
 
 export async function recordWebsite(job: RecordingJob): Promise<RecordingResult> {
   const display = await acquireDisplay();
@@ -47,6 +63,8 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
   let browserContext: Awaited<ReturnType<typeof chromium.launchPersistentContext>> | null = null;
   let recordedDurationSeconds = 0;
   const tempPath = path.join(os.tmpdir(), `presently-${job.jobId}.mp4`);
+
+  const args = constructChromiumArgs(job.options);
 
   try {
     // Start Xvfb
@@ -64,31 +82,15 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
       executablePath: CHROME_EXECUTABLE,
       headless: false,
       chromiumSandbox: true,
-      viewport: {
-        width: job.viewport?.width ?? VIEWPORT_WIDTH,
-        height: job.viewport?.height ?? VIEWPORT_HEIGHT,
-      },
+      // Set viewport to null so Playwright inherits the browser window's size.
+      // This is required for --kiosk and full-screen flags to actually take effect
+      // without Playwright restricting the web content into a letterboxed viewport.
+      viewport: job.options.showBrowserFrame ? null : job.options.viewport,
       env: {
         ...process.env,
         DISPLAY: displayEnv,
       },
-      args: [
-        // Force X11 mode so Chrome works inside the Xvfb display on Wayland
-        "--ozone-platform=x11",
-        // Disable features that can interfere with smooth rendering in a VM display
-        "--disable-dev-shm-usage",
-        "--disable-software-rasterizer",
-        // Ensure animations run at full speed — not throttled for background tabs
-        "--disable-background-timer-throttling",
-        "--disable-renderer-backgrounding",
-        "--disable-backgrounding-occluded-windows",
-        // Keep a consistent window size matching the FFmpeg capture resolution
-        `--window-size=${VIEWPORT_WIDTH},${VIEWPORT_HEIGHT}`,
-        "--window-position=0,0",
-        "--hide-scrollbars",
-        // For full screen mode
-        "--kiosk",
-      ],
+      args: args,
       ignoreDefaultArgs: ["--enable-automation"],
     });
 
@@ -108,22 +110,18 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
       timeout: 60_000,
     });
 
-    ffmpegHandle = startRecording(display, tempPath);
+    ffmpegHandle = startRecording(
+      displayEnv,
+      tempPath,
+      `${job.options.viewport.width}x${job.options.viewport.height}`
+    );
+    const recordingStart = Date.now();
 
     await sleep(500);
 
-    const scrollOpts: Partial<ScrollOptions> = {
-      pauseAtTopMs: 2000,
-      pauseAtBottomMs: 1000,
-      animationSettleMs: 1000,
-    };
-
-    await sleep(scrollOpts.animationSettleMs ?? 1000);
-
-    const recordingStart = Date.now();
-    await runScrollSession(page, scrollOpts);
+    await runScrollSession(page, job.options.scroll);
+    
     recordedDurationSeconds = (Date.now() - recordingStart) / 1000;
-
     await stopRecording(ffmpegHandle);
     ffmpegHandle = null;
 
@@ -164,6 +162,21 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
 }
 
 /* ========================= Helpers ========================= */
+
+function constructChromiumArgs(options: RecordingOptions): string[] {
+  const args = DEFAULT_ARGS;
+
+  if (options.enableDarkMode) {
+    args.push("--force-dark-mode");
+  }
+  if (options.showBrowserFrame) {
+    args.push("--kiosk");
+  } else {
+    args.push(`--window-size=${options.viewport.width},${options.viewport.height}`);
+  }
+
+  return args;
+}
 
 // Spawns a child process running Xvfb on the given display.
 function spawnXvfb(display: number): ChildProcess {

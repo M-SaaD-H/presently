@@ -3,10 +3,17 @@ import type { ChildProcess } from "child_process";
 export interface RecordingJob {
   jobId: string;
   url: string;
+  options: RecordingOptions;
+}
+
+export interface RecordingOptions {
+  enableDarkMode: boolean;
   viewport: {
-    width: number;
     height: number;
+    width: number;
   };
+  showBrowserFrame: boolean;
+  scroll: ScrollOptions;
 }
 
 export interface RecordingResult {

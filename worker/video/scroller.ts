@@ -17,12 +17,6 @@
 import type { Page } from "playwright";
 import type { ScrollOptions } from "./types";
 
-const DEFAULT_SCROLL_OPTIONS: Required<ScrollOptions> = {
-  pauseAtTopMs: 2000,
-  pauseAtBottomMs: 2500,
-  animationSettleMs: 1000,
-};
-
 // Lerp factor: what fraction of remaining distance to cover each frame
 const BASE_EASING_FACTOR = 0.06;
 
@@ -31,11 +25,10 @@ const SCROLL_FPS = 30;
 
 export async function runScrollSession(
   page: Page,
-  options: Partial<ScrollOptions> = {}
+  options: ScrollOptions
 ): Promise<void> {
-  const opts = { ...DEFAULT_SCROLL_OPTIONS, ...options };
-
-  await sleep(opts.pauseAtTopMs);
+  await sleep(options.animationSettleMs);
+  await sleep(options.pauseAtTopMs);
 
   const viewportHeight: number = await page.evaluate(() => window.innerHeight);
 
@@ -103,7 +96,7 @@ export async function runScrollSession(
     sectionIndex++;
   }
 
-  await sleep(opts.pauseAtBottomMs);
+  await sleep(options.pauseAtBottomMs);
 }
 
 /**

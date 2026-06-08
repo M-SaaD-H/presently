@@ -11,7 +11,6 @@ import type { FFmpegProcess } from "./types";
 
 const FFMPEG_BIN = process.env.FFMPEG_BIN ?? "ffmpeg";
 const RECORDING_FPS = 30;
-const RECORDING_RESOLUTION = "1280x800";
 // Maximum time to wait for FFmpeg to finish muxing after sending 'q'
 const STOP_TIMEOUT_MS = 15_000;
 
@@ -20,19 +19,18 @@ const STOP_TIMEOUT_MS = 15_000;
  * Returns immediately, recording happens asynchronously in the child process.
  */
 export function startRecording(
-  display: number,
-  outputPath: string
+  display: string,
+  outputPath: string,
+  resolution: string,
 ): FFmpegProcess {
-  const displayStr = `:${display}`;
-
   const args = [
     "-y", // overwrite without prompting
     // Input: x11grab from the virtual display
     "-f", "x11grab",
     "-r", String(RECORDING_FPS),
-    "-s", RECORDING_RESOLUTION,
+    "-s", resolution,
     "-draw_mouse", "0",
-    "-i", `${displayStr}+0,0`,
+    "-i", `${display}+0,0`,
     // Encoding: libx264, visually lossless quality, fast preset, yuv420p for
     // broad player compatibility
     "-vcodec", "libx264",
@@ -45,7 +43,7 @@ export function startRecording(
   const proc = spawn(FFMPEG_BIN, args, {
     stdio: ["pipe", "pipe", "pipe"],
     // Prevent FFmpeg from inheriting the host display — it reads from x11grab
-    env: { ...process.env, DISPLAY: displayStr },
+    env: { ...process.env, DISPLAY: display },
   });
 
   // Surface FFmpeg stderr for debugging without polluting stdout

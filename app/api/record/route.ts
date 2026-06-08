@@ -16,6 +16,7 @@ import { addRecordingJob } from "@/worker/video/queue";
 import { connectDB } from "@/lib/db";
 import { Job } from "@/models/job";
 import { auth } from "@/lib/auth";
+import { RecordingOptions } from "@/worker/video/types";
 
 export const POST = asyncHandler(async (req: NextRequest) => {
   const session = await auth();
@@ -29,12 +30,17 @@ export const POST = asyncHandler(async (req: NextRequest) => {
     throw new ApiError(400, "Invalid JSON body");
   });
 
-  const { url } = body as {
-    url?: unknown;
+  const { url, recordingOptions } = body as {
+    url?: string;
+    recordingOptions?: RecordingOptions;
   };
 
   if (!url || typeof url !== "string") {
     throw new ApiError(400, "Missing or invalid 'url' field");
+  }
+
+  if (!recordingOptions || typeof recordingOptions !== "object") {
+    throw new ApiError(400, "Missing or invalid 'recordingOptions' field");
   }
 
   // Validate: must be a proper http/https URL
@@ -55,7 +61,11 @@ export const POST = asyncHandler(async (req: NextRequest) => {
     status: "processing",
   });
 
-  const jobId = await addRecordingJob(job._id.toString(), parsedUrl.toString());
+  const jobId = await addRecordingJob(
+    job._id.toString(),
+    parsedUrl.toString(),
+    recordingOptions
+  );
 
   return NextResponse.json(
     new ApiResponse(

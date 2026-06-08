@@ -4,7 +4,7 @@
 
 import { Queue } from "bullmq";
 import { getRedisConnectionOptions } from "./redisConnection";
-import type { RecordingJob, RecordingResult } from "./types";
+import type { RecordingJob, RecordingOptions, RecordingResult } from "./types";
 
 export const QUEUE_NAME = "recording";
 
@@ -15,8 +15,18 @@ export const recordingQueue = new Queue<RecordingJob, RecordingResult, string>(
   { connection: getRedisConnectionOptions() }
 );
 
-export interface AddJobOptions {
-  viewport?: { width: number; height: number };
+const DEFAULT_RECORDING_OPTIONS: RecordingOptions = {
+  enableDarkMode: false,
+  viewport: {
+    height: 1200,
+    width: 800
+  },
+  showBrowserFrame: true,
+  scroll: {
+    pauseAtTopMs: 2000,
+    pauseAtBottomMs: 1000,
+    animationSettleMs: 1000
+  }
 }
 
 /**
@@ -25,12 +35,13 @@ export interface AddJobOptions {
 export async function addRecordingJob(
   jobId: string,
   url: string,
-  options: AddJobOptions = {}
+  options: RecordingOptions
 ): Promise<string> {
+  const opts = { ...DEFAULT_RECORDING_OPTIONS, ...options };
   const jobData: RecordingJob = {
     jobId,
     url,
-    viewport: options.viewport ?? { width: 1280, height: 800 },
+    options: opts
   };
 
   await recordingQueue.add("record", jobData, {
