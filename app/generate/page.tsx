@@ -4,11 +4,25 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/toaster";
-import { cn } from "@/lib/utils";
+import { StatusBar, RecordingStatus } from "./components/status-bar";
+import { RecordingOptionsPanel } from "./components/recording-options-panel";
+import { RecordingOptions } from "@/worker/video/types";
 
-type RecordingStatus = "idle" | "queued" | "processing" | "done" | "failed";
+const DEFAULT_OPTIONS: RecordingOptions = {
+  enableDarkMode: false,
+  viewport: {
+    height: 1200,
+    width: 800
+  },
+  showBrowserFrame: true,
+  scroll: {
+    pauseAtTopMs: 2000,
+    pauseAtBottomMs: 1000,
+    animationSettleMs: 1000
+  }
+};
 
 function GenerateDemoContent() {
   const router = useRouter();
@@ -16,6 +30,7 @@ function GenerateDemoContent() {
   const jobIdFromQuery = searchParams.get("jobId");
 
   const [url, setUrl] = useState("");
+  const [options, setOptions] = useState<RecordingOptions>(DEFAULT_OPTIONS);
   const [status, setStatus] = useState<RecordingStatus>("idle");
 
   // If we already have a jobId in the query params, we are polling
@@ -34,7 +49,10 @@ function GenerateDemoContent() {
       const res = await fetch("/api/record", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({
+          url,
+          recordingOptions: options
+        }),
       });
 
       const json = await res.json();
@@ -85,10 +103,10 @@ function GenerateDemoContent() {
   }, [jobIdFromQuery, status, router]);
 
   return (
-    <div className="flex flex-col items-center justify-center px-4 my-26">
-      <div className="w-full max-w-xl mx-auto space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="font-serif text-3xl md:text-4xl text-foreground">
+    <div className="flex flex-col items-center justify-center px-4 my-12">
+      <div className="w-full max-w-2xl mx-auto space-y-8">
+        <div className="text-center space-y-3">
+          <h1 className="font-serif text-4xl md:text-5xl text-foreground tracking-tight">
             Create your demo
           </h1>
           <p className="text-muted-foreground">
@@ -96,12 +114,14 @@ function GenerateDemoContent() {
           </p>
         </div>
 
-        <div className="border border-border/50 rounded-2xl p-6 md:p-8 shadow-sm bg-background">
+        <div className="border border-border/50 rounded-2xl p-6 md:p-8 shadow-sm bg-background/50 backdrop-blur-sm">
           {isPolling ? (
-            <StatusBar status={status} />
+            <div className="py-8">
+              <StatusBar status={status} />
+            </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div className="space-y-3">
                 <label htmlFor="url" className="text-sm font-medium text-foreground">
                   Website URL
                 </label>
@@ -117,11 +137,17 @@ function GenerateDemoContent() {
                 />
               </div>
 
+              <RecordingOptionsPanel
+                options={options}
+                onChange={setOptions}
+                disabled={status === "queued" || !!jobIdFromQuery}
+              />
+
               <Button
                 type="submit"
                 size="lg"
                 disabled={status === "queued"}
-                className="w-full h-12 rounded-lg text-base"
+                className="w-full h-14 rounded-xl text-lg font-medium shadow-md hover:shadow-lg transition-all"
               >
                 {status === "queued" ? (
                   <>
@@ -136,101 +162,6 @@ function GenerateDemoContent() {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatusBar({ status }: { status: RecordingStatus }) {
-  const steps = [
-    { key: "queued", label: "Queued" },
-    { key: "processing", label: "Recording" },
-    { key: "done", label: "Complete" },
-  ] as const;
-
-  const currentIdx = steps.findIndex((s) => s.key === status);
-  const activeIdx = currentIdx === -1 ? 0 : currentIdx;
-
-  return (
-    <div className="flex flex-col gap-3">
-      {/* Step indicators */}
-      <div className="flex items-center justify-between">
-        {steps.map((step, i) => {
-          const isComplete = i < activeIdx;
-          const isActive = i === activeIdx;
-          return (
-            <div key={step.key} className="flex items-center">
-              <div className="flex flex-col items-center gap-1.5">
-                <div
-                  className={cn(
-                    "flex size-6 items-center justify-center rounded-full text-xs font-semibold transition-all",
-                    isComplete
-                      ? "bg-primary text-primary-foreground"
-                      : isActive
-                        ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
-                        : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {isComplete ? (
-                    <CheckCircle2 className="size-3.5" />
-                  ) : isActive ? (
-                    <Loader2 className="size-3 animate-spin" />
-                  ) : (
-                    i + 1
-                  )}
-                </div>
-                <span
-                  className={cn(
-                    "text-xs font-medium",
-                    isActive ? "text-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {step.label}
-                </span>
-              </div>
-              {i < steps.length - 1 && (
-                <div
-                  className={cn(
-                    "mb-4 flex-1 transition-colors",
-                    i < activeIdx ? "bg-primary" : "bg-border",
-                  )}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Animated progress bar */}
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className={cn(
-            "h-full rounded-full transition-all duration-700",
-            status === "processing"
-              ? "animate-pulse bg-primary"
-              : "bg-primary",
-          )}
-          style={{
-            width:
-              status === "queued"
-                ? "4%"
-                : status === "processing"
-                  ? "50%"
-                  : "100%",
-          }}
-          role="progressbar"
-          aria-valuenow={
-            status === "queued" ? 15 : status === "processing" ? 70 : 100
-          }
-          aria-valuemin={0}
-          aria-valuemax={100}
-        />
-      </div>
-
-      <p className="text-center text-xs text-muted-foreground">
-        {status === "queued"
-          ? "Waiting for a recording slot…"
-          : "Capturing your website, this takes about a minute"}
-      </p>
     </div>
   );
 }
