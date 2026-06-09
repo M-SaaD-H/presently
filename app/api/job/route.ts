@@ -6,8 +6,10 @@ import { ApiError } from "@/utils/apiError";
 import { asyncHandler } from "@/utils/asyncHandler";
 import { auth } from "@/lib/auth";
 
-export const GET = asyncHandler(async (_req: NextRequest) => {
-  const session = await auth();
+export const GET = asyncHandler(async (req: NextRequest) => {
+  const session = await auth.api.getSession({
+    headers: req.headers,
+  });
   if (!session?.user?.id) {
     throw new ApiError(401, "You must be logged in to view jobs");
   }

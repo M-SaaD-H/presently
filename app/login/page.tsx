@@ -1,6 +1,8 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { signIn } from "@/lib/auth";
+import { authClient } from "@/lib/auth-client";
 
 export default function LoginPage() {
   return (
@@ -15,16 +17,15 @@ export default function LoginPage() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <form
-          action={async () => {
-            "use server"
-            await signIn("google")
-          }}
+        <Button
+          variant="outline"
+          className="w-full h-11 text-base"
+          onClick={async () => await authClient.signIn.social({
+            provider: "google"
+          })}
         >
-          <Button type="submit" variant="outline" className="w-full h-11 text-base">
-            Continue with Google
-          </Button>
-        </form>
+          Continue with Google
+        </Button>
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">

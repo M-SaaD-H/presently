@@ -10,9 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { LogOut, Presentation } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 
 interface UserNavProps {
   user: {
@@ -54,9 +54,9 @@ export function UserNav({ user }: UserNavProps) {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20" onClick={() => signOut({
-            
-          })}>
+          <DropdownMenuItem
+            className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20"
+            onClick={async () => await authClient.signOut()}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Log out</span>
           </DropdownMenuItem>

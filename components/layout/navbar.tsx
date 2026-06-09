@@ -1,11 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
-import { auth } from "@/lib/auth";
 import { UserNav } from "@/components/layout/user-nav";
+import { authClient } from "@/lib/auth-client";
 
-export async function Navbar() {
-  const session = await auth();
+export function Navbar() {
+  const session = authClient.useSession();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
@@ -21,7 +23,7 @@ export async function Navbar() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          {!session?.user ? (
+          {!session.data?.user ? (
             <>
               <Link href="/login">
                 <Button variant="ghost" className="text-sm font-medium">Log in</Button>
@@ -31,12 +33,7 @@ export async function Navbar() {
               </Link>
             </>
           ) : (
-            <>
-              <Link href="/generate">
-                <Button className="text-sm font-medium">Generate Demo</Button>
-              </Link>
-              <UserNav user={session.user} />
-            </>
+            <UserNav user={session.data.user} />
           )}
         </div>
       </div>

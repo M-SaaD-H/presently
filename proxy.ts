@@ -1,19 +1,22 @@
 import { NextResponse, NextRequest } from "next/server"
-import { getToken } from "next-auth/jwt"
+import { auth } from "./lib/auth";
 
 export async function proxy(req: NextRequest) {
-  const token = await getToken({ req: req, secret: process.env.NEXTAUTH_SECRET });
+  const session = await auth.api.getSession({
+    headers: req.headers,
+  });
   const url = req.nextUrl;
   const isAuthPage = url.pathname === "/login"
 
   // Logged in user should not be allowed on login page
-  if (isAuthPage && token) {
+  if (isAuthPage && session) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
   if ((url.pathname.startsWith("/demo") ||
-    url.pathname.startsWith("/generate")) &&
-    !token
+    url.pathname.startsWith("/generate") ||
+    url.pathname.startsWith("/dashboard")) &&
+    !session
   ) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
@@ -22,5 +25,11 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/demo", "/demo/:path*", "/generate"]
+  matcher: [
+    "/login",
+    "/demo",
+    "/demo/:path*",
+    "/generate",
+    "/dashboard"
+  ]
 }
