@@ -9,12 +9,13 @@
 const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
 
 // Parse the URL into the host/port/password shape BullMQ expects
-function parseRedisUrl(url: string): { host: string; port: number; password?: string } {
+function parseRedisUrl(url: string): { host: string; port: number; password?: string; tls?: unknown } {
   const parsed = new URL(url);
   return {
     host: parsed.hostname || "127.0.0.1",
     port: parsed.port ? parseInt(parsed.port, 10) : 6379,
     ...(parsed.password ? { password: decodeURIComponent(parsed.password) } : {}),
+    ...(parsed.protocol === "rediss:" ? { tls: {} } : {}),
   };
 }
 
