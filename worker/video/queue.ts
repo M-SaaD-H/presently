@@ -18,8 +18,8 @@ export const recordingQueue = new Queue<RecordingJob, RecordingResult, string>(
 const DEFAULT_RECORDING_OPTIONS: RecordingOptions = {
   enableDarkMode: false,
   viewport: {
-    height: 1200,
-    width: 800
+    width: 1200,
+    height: 800
   },
   showBrowserFrame: true,
   scroll: {

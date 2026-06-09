@@ -64,20 +64,20 @@ export function RecordingOptionsPanel({ options, onChange, disabled }: Recording
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Viewport Settings</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Height (px)</Label>
-                    <Input
-                      type="number"
-                      value={options.viewport.height}
-                      onChange={(e) => updateViewport("height", parseInt(e.target.value) || 0)}
-                      disabled={disabled}
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label>Width (px)</Label>
                     <Input
                       type="number"
                       value={options.viewport.width}
                       onChange={(e) => updateViewport("width", parseInt(e.target.value) || 0)}
+                      disabled={disabled}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Height (px)</Label>
+                    <Input
+                      type="number"
+                      value={options.viewport.height}
+                      onChange={(e) => updateViewport("height", parseInt(e.target.value) || 0)}
                       disabled={disabled}
                     />
                   </div>

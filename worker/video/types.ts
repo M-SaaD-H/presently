@@ -9,8 +9,8 @@ export interface RecordingJob {
 export interface RecordingOptions {
   enableDarkMode: boolean;
   viewport: {
-    height: number;
     width: number;
+    height: number;
   };
   showBrowserFrame: boolean;
   scroll: ScrollOptions;

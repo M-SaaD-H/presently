@@ -20,12 +20,12 @@ export function StatusBar({ status }: StatusBarProps) {
   return (
     <div className="flex flex-col gap-3">
       {/* Step indicators */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between w-full">
         {steps.map((step, i) => {
           const isComplete = i < activeIdx || status === "done";
           const isActive = i === activeIdx && status !== "done";
           return (
-            <div key={step.key} className="flex items-center w-full">
+            <div key={step.key} className={cn("flex items-center", i < steps.length - 1 ? "w-full" : "")}>
               <div className="flex flex-col items-center gap-1.5 relative z-10">
                 <div
                   className={cn(

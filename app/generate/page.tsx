@@ -13,8 +13,8 @@ import { RecordingOptions } from "@/worker/video/types";
 const DEFAULT_OPTIONS: RecordingOptions = {
   enableDarkMode: false,
   viewport: {
-    height: 1200,
-    width: 800
+    width: 1200,
+    height: 800
   },
   showBrowserFrame: true,
   scroll: {
