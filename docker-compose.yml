@@ -1,0 +1,74 @@
+version: '3.9'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - MONGODB_URI=${MONGODB_URI}
+        - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+        - BETTER_AUTH_URL=${BETTER_AUTH_URL}
+        - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+        - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+        - SUPABASE_URL=${SUPABASE_URL}
+        - SUPABASE_SECRET_KEY=${SUPABASE_SECRET_KEY}
+    ports:
+      - "3000:3000"
+    networks:
+      - net
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - SUPABASE_URL=${SUPABASE_URL}
+    volumes:
+      # Share local output dir so the web container can serve the videos
+      - shared_output:/app/output
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - MONGODB_URI=${MONGODB_URI}
+        - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+        - BETTER_AUTH_URL=${BETTER_AUTH_URL}
+        - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+        - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+        - SUPABASE_URL=${SUPABASE_URL}
+        - SUPABASE_SECRET_KEY=${SUPABASE_SECRET_KEY}
+    command: ["bun", "run", "worker"]
+    networks:
+      - net
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=production
+      - STORAGE_TYPE=cloud
+      - OUTPUT_DIR=/app/output
+      - CHROME_EXECUTABLE=/usr/bin/chromium
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SECRET_KEY=${SUPABASE_SECRET_KEY}
+      - MONGODB_URI=${MONGODB_URI}
+    volumes:
+      # Share local output dir so the worker can write videos here
+      - shared_output:/app/output
+    # Chrome often needs more shared memory to avoid crashing inside Docker
+    shm_size: '2gb'
+    security_opt:
+      - seccomp=unconfined
+    restart: unless-stopped
+
+volumes:
+  shared_output:
+
+networks:
+  net:
+    driver: bridge
