@@ -48,6 +48,8 @@ const DEFAULT_ARGS = [
   // Keep a consistent window size matching the FFmpeg capture resolution
   "--window-position=0,0",
   "--hide-scrollbars",
+  // To use GTK themes
+  "--gtk-version=3"
   // // For full screen mode
   // "--kiosk",
   // `--window-size=${VIEWPORT_WIDTH},${VIEWPORT_HEIGHT}`,
@@ -88,9 +90,11 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
       // This is required for --kiosk and full-screen flags to actually take effect
       // without Playwright restricting the web content into a letterboxed viewport.
       viewport: job.options.showBrowserFrame ? job.options.viewport : null,
+      colorScheme: job.options.enableDarkMode ? "dark" : "light",
       env: {
         ...process.env,
         DISPLAY: displayEnv,
+        GTK_THEME: job.options.enableDarkMode ? "Adwaita:dark" : "Adwaita:light"
       },
       args: args,
       ignoreDefaultArgs: ["--enable-automation"],
@@ -111,6 +115,7 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
       waitUntil: "load",
       timeout: 60_000,
     });
+    await page.emulateMedia({ colorScheme: job.options.enableDarkMode ? "dark" : "light" });
 
     ffmpegHandle = startRecording(displayEnv, tempPath, resolution);
     const recordingStart = Date.now();
@@ -162,12 +167,16 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
 /* ========================= Helpers ========================= */
 
 function constructChromiumArgs(options: RecordingOptions): string[] {
-  const args = DEFAULT_ARGS;
+  const args = [...DEFAULT_ARGS];
 
+  args.push(`--window-size=${options.viewport.width},${options.viewport.height}`);
+  
   if (options.enableDarkMode) {
     args.push("--force-dark-mode");
+  } else {
+    args.push("--force-light-mode");
   }
-  args.push(`--window-size=${options.viewport.width},${options.viewport.height}`);
+  
   if (!options.showBrowserFrame) {
     args.push("--kiosk");
   }
