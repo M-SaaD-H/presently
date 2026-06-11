@@ -67,8 +67,10 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
   const args = constructChromiumArgs(job.options);
 
   try {
+    const resolution = `${job.options.viewport.width}x${job.options.viewport.height}`;
+
     // Start Xvfb
-    xvfbProc = spawnXvfb(display);
+    xvfbProc = spawnXvfb(display, resolution);
     await waitForXvfb(display);
 
     // Launch Chrome via Playwright
@@ -85,7 +87,7 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
       // Set viewport to null so Playwright inherits the browser window's size.
       // This is required for --kiosk and full-screen flags to actually take effect
       // without Playwright restricting the web content into a letterboxed viewport.
-      viewport: job.options.showBrowserFrame ? null : job.options.viewport,
+      viewport: job.options.showBrowserFrame ? job.options.viewport : null,
       env: {
         ...process.env,
         DISPLAY: displayEnv,
@@ -110,11 +112,7 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
       timeout: 60_000,
     });
 
-    ffmpegHandle = startRecording(
-      displayEnv,
-      tempPath,
-      `${job.options.viewport.width}x${job.options.viewport.height}`
-    );
+    ffmpegHandle = startRecording(displayEnv, tempPath, resolution);
     const recordingStart = Date.now();
 
     await sleep(500);
@@ -169,20 +167,19 @@ function constructChromiumArgs(options: RecordingOptions): string[] {
   if (options.enableDarkMode) {
     args.push("--force-dark-mode");
   }
-  if (options.showBrowserFrame) {
+  args.push(`--window-size=${options.viewport.width},${options.viewport.height}`);
+  if (!options.showBrowserFrame) {
     args.push("--kiosk");
-  } else {
-    args.push(`--window-size=${options.viewport.width},${options.viewport.height}`);
   }
 
   return args;
 }
 
 // Spawns a child process running Xvfb on the given display.
-function spawnXvfb(display: number): ChildProcess {
+function spawnXvfb(display: number, resolution: string): ChildProcess {
   const proc = spawn(
     "Xvfb",
-    [`:${display}`, "-screen", "0", "1280x800x24", "-ac", "+extension", "GLX"],
+    [`:${display}`, "-screen", "0", `${resolution}x24`, "-ac", "+extension", "GLX"],
     {
       stdio: ["ignore", "pipe", "pipe"],
       detached: false,
