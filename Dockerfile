@@ -1,0 +1,65 @@
+FROM oven/bun:1 AS builder
+
+ARG MONGODB_URI
+ARG BETTER_AUTH_SECRET
+ARG BETTER_AUTH_URL
+ARG GOOGLE_CLIENT_ID
+ARG GOOGLE_CLIENT_SECRET
+ARG SUPABASE_URL
+ARG SUPABASE_SECRET_KEY
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
+
+# Copy application code
+COPY . .
+
+# Build the Next.js app
+# Ensure environment variables needed for build (if any) are set, or build skips them.
+RUN bun run build
+
+
+# Runner Stage
+FROM oven/bun:1-slim AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Install system dependencies required for Xvfb, FFmpeg, and Chrome
+RUN apt-get update && apt-get install -y \
+    xvfb \
+    x11-utils \
+    ffmpeg \
+    chromium \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instruct Playwright to use the system Chromium
+ENV CHROME_EXECUTABLE=/usr/bin/chromium
+
+# Copy necessary files and build output from the builder stage
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/bun.lock ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/worker ./worker
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/models ./models
+COPY --from=builder /app/next.config.ts ./next.config.ts
+COPY --from=builder /app/utils ./utils
+COPY --from=builder /app/proxy.ts ./proxy.ts
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+
+# Create necessary directories and ensure proper permissions
+RUN mkdir -p output tmp /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix && chown -R bun:bun /app/output /app/tmp /app/.next
+
+# Run the app as non-root user
+USER bun
+
+EXPOSE 3000
+
+# Start the web and worker in the same container
+CMD ["sh", "-c", "bun run worker & exec bun run start"]
