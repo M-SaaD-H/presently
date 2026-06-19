@@ -62,4 +62,4 @@ USER bun
 EXPOSE 3000
 
 # Start the web and worker in the same container
-CMD ["sh", "-c", "bun run worker & exec bun run start"]
+CMD ["sh", "-c", "bun run start"]
