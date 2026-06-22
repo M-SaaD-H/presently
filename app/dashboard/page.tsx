@@ -36,9 +36,9 @@ export default function DashboardPage() {
     <div className="flex-1 flex flex-col bg-background px-4 py-12 md:py-16">
       <div className="container mx-auto max-w-5xl space-y-12">
         
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-row items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-medium tracking-tight text-foreground">Dashboard</h1>
+            <h1 className="text-2xl md:text-4xl font-serif font-medium tracking-tight text-foreground">Dashboard</h1>
             <p className="text-sm text-muted-foreground mt-1">Manage your generated demos.</p>
           </div>
           <Link href="/generate">
