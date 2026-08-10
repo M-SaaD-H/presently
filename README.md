@@ -10,69 +10,102 @@ Presently is an automated service that converts any website link into a smooth, 
 
 ## Architecture Overview
 
-The system architecture is decoupled into a frontend submission interface and a robust background processing worker. 
+Presently is structured as a **pnpm workspace monorepo** managed with **Turborepo**. The core rendering engine is completely decoupled from the UI and background workers.
 
 ```mermaid
 graph TD
-    Client[Web Client] -->|Submit URL| NextJS[Next.js API]
-    NextJS -->|Create Job| MongoDB[(MongoDB)]
-    NextJS -->|Enqueue Task| RedisQueue[(BullMQ / Redis)]
+    Client[Web Client] -->|Submit URL / Poll Status| WebApp["apps/web (Next.js)"]
+    WebApp -->|Store / Query Job| MongoDB[(MongoDB)]
+    WebApp -->|HTTP POST /jobs| WorkerApp["apps/worker (Express + BullMQ)"]
     
-    subgraph Web Container
-        NextJS
+    subgraph Web Application
+        WebApp
     end
     
-    subgraph Worker Container
-        WorkerInstance[Worker Node]
-        WorkerInstance -->|Pop Task| RedisQueue
-        WorkerInstance -->|Launch Virtual Display| Xvfb[Xvfb Display]
-        WorkerInstance -->|Launch Browser| Chrome[Chrome via Playwright]
-        WorkerInstance -->|Start Capture| FFmpeg[FFmpeg x11grab]
-        WorkerInstance -->|Simulate Reading| Scroller[Scroll Engine]
+    subgraph Worker Application
+        WorkerApp -->|Push / Pop Task| RedisQueue[(BullMQ / Redis)]
+        WorkerApp -->|Invoke Engine| RendererPkg["packages/renderer"]
+        WorkerApp -->|Persist Video| Storage[(Supabase / Local Output)]
+    end
+
+    subgraph Renderer Package
+        RendererPkg -->|Launch Virtual Display| Xvfb[Xvfb Display]
+        RendererPkg -->|Launch Browser| Chrome[Chrome via Playwright]
+        RendererPkg -->|Start Capture| FFmpeg[FFmpeg x11grab]
+        RendererPkg -->|Simulate Reading| Scroller[Scroll Engine]
         
         Chrome --> Xvfb
         FFmpeg -->|Capture X11| Xvfb
     end
     
-    WorkerInstance -->|Update Status| MongoDB
-    WorkerInstance -->|Upload Video| Storage[(Supabase / Local)]
-    Storage -->|Serve Video| Client
+    WorkerApp -->|Update Status| MongoDB
+    Storage -->|Serve / Redirect Video| WebApp
+```
+
+### Monorepo Structure
+
+```
+presently/
+├── apps/
+│   ├── web/                      # Next.js 16 App Router UI & API gateway
+│   └── worker/                   # Standalone worker (Express HTTP API + BullMQ queue consumer)
+├── packages/
+│   ├── renderer/                 # Core rendering engine (Playwright + FFmpeg + Xvfb)
+│   ├── shared/                   # Portable TypeScript types, DTOs, and ApiError/ApiResponse
+│   └── db/                       # Mongoose database connection & schemas (Job, User)
+├── pnpm-workspace.yaml
+├── turbo.json
+├── package.json                  # Root workspace config
+├── Dockerfile                    # Multi-stage Docker build
+└── docker-compose.yml
 ```
 
 ### Key Components
 
-1. **Next.js Web App**: Handles user submissions, displays the status of jobs, and serves completed videos. Built with App Router and styled using Tailwind CSS and `shadcn/ui`.
-2. **Database (MongoDB / Mongoose)**: Stores the state of recording jobs (pending, processing, completed, failed) and associated metadata.
-3. **Task Queue (BullMQ / Redis)**: Manages concurrent recording tasks, ensuring the system doesn't overload the host. Concurrency matches the configured Xvfb display pool.
-4. **Worker Service (Bun)**: Orchestrates the actual recording pipeline:
-   - **Xvfb**: Creates a virtual X11 display (Wayland compatible via XWayland).
-   - **Playwright / Chrome**: Loads the target URL and runs seamlessly within the isolated Xvfb display.
-   - **FFmpeg**: Uses `x11grab` to record the virtual display frame by frame, encoding the video asynchronously.
-   - **Human-like Scroller**: Emulates realistic scrolling physics and variable reading pauses (skimming vs deep reading) to make the video feel natural.
-5. **Storage Mechanism**: Outputs can be saved to the local filesystem or uploaded directly to Supabase Storage for cloud serving.
+1. **`apps/web` (Next.js Web App)**: User interface for submitting URLs, viewing generation status, and watching completed walkthroughs. Communicates with `apps/worker` over HTTP.
+2. **`apps/worker` (Worker Application)**:
+   - **Express HTTP API**: Receives job submissions (`POST /jobs`) and status queries (`GET /jobs/:jobId`).
+   - **BullMQ Consumer**: Manages job queue concurrency with Redis. Delegates rendering to `@presently/renderer` and persists the output.
+3. **`packages/renderer` (Rendering Engine)**: Pure, framework-independent rendering package:
+   - **Xvfb**: Creates an isolated virtual X11 display (Wayland-compatible via XWayland).
+   - **Playwright / Chrome**: Loads the target URL and runs within the isolated Xvfb display.
+   - **FFmpeg**: Uses `x11grab` to record the virtual display frame by frame.
+   - **Human-like Scroller**: Emulates realistic scrolling physics and variable reading pauses.
+4. **`packages/db`**: Database connection singleton and Mongoose models (`Job`, `User`) shared by web and worker.
+5. **`packages/shared`**: Shared type definitions (`RecordingJob`, `RecordingOptions`, `RecordingResult`) and error/response utilities.
+
+---
 
 ## Getting Started
 
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v20+)
+- [pnpm](https://pnpm.io/) (v9+)
+- [Redis](https://redis.io/) (for local queue processing)
+
+---
+
 ### Running with Docker (Recommended)
 
-Presently is packaged using Docker Compose to orchestrate separate containers for the Next.js web interface and the background worker. Both services are built from the same unified `Dockerfile` but run their respective processes.
+Presently uses Docker Compose with multi-stage builds (`web` and `worker` targets) defined in a single `Dockerfile`.
 
 1. Ensure you have [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/) installed.
 2. Copy the environment template:
    ```bash
    cp .env.example .env.local
    ```
-   *(Ensure you configure all necessary keys, including `REDIS_URL`, `MONGODB_URI`, `SUPABASE_URL`, etc).*
-3. Build and launch the services:
+   *(Configure `REDIS_URL`, `MONGODB_URI`, `SUPABASE_URL`, `WORKER_URL`, etc.)*
+3. Build and launch the containers:
    ```bash
    docker-compose up -d --build
    ```
 
-This spins up the `web` and `worker` containers. The application will now be available at `http://localhost:3000`.
+The web application will be accessible at `http://localhost:3000` and the worker HTTP API at `http://localhost:3001`.
+
+---
 
 ### Local Development (Native)
-
-If you prefer to run the application natively on your host machine for development:
 
 #### 1. System Dependencies
 
@@ -87,36 +120,61 @@ yay -S google-chrome
 sudo apt-get install xvfb x11-utils ffmpeg redis-server
 ```
 
-#### 2. Environment Setup
+#### 2. Install Workspace Dependencies
 
-Copy `.env.example` to `.env.local` and set `CHROME_EXECUTABLE` (e.g., `/usr/bin/google-chrome-stable`), `REDIS_URL`, and other necessary variables.
+```bash
+pnpm install
+```
 
-#### 3. Run the Services
+#### 3. Environment Setup
+
+Copy `.env.example` to `.env.local` and set all required environment variables:
+```bash
+cp .env.example .env.local
+```
+
+#### 4. Run Development Servers
 
 1. **Start Redis**:
    ```bash
    redis-server
    ```
-2. **Start the App**:
+2. **Start Web & Worker in Dev Mode** (via Turborepo):
    ```bash
-   bun dev
+   pnpm dev
    ```
-3. **Start the Worker** (in a separate terminal):
+   *Or run individually:*
    ```bash
-   bun run worker
+   # Terminal 1 — Worker process (HTTP API + BullMQ)
+   pnpm --filter @presently/worker dev
+
+   # Terminal 2 — Next.js Web App
+   pnpm --filter @presently/web dev
    ```
+
+#### 5. Useful Scripts
+
+```bash
+pnpm build        # Build all packages and applications via Turbo
+pnpm type-check   # Type-check all workspace projects
+pnpm lint         # Lint all workspace projects
+```
+
+---
 
 ## Under the Hood: The Scroll Engine
 
-Presently features a custom Scroll Engine (`worker/video/scroller.ts`) designed to create organic, engaging walkthroughs. Instead of an automated, instantaneous jump to the bottom of the page, the engine:
-- Uses linear interpolation (lerp) for smooth scroll deceleration (easing-out).
-- Adjusts "reading pauses" probabilistically to simulate varying reading depth (e.g., 60% quick skims, 15% long reading sessions).
-- Adapts dynamically to infinite scroll or lazy-loaded content by continuously re-evaluating the DOM's scroll height.
+Presently features a custom Scroll Engine (`packages/renderer/src/scroller.ts`) designed to create organic, engaging walkthroughs:
+- **Natural Scroll Physics**: Uses linear interpolation (lerp) for smooth deceleration (easing-out).
+- **Variable Reading Speed**: Adjusts "reading pauses" probabilistically (skimming vs deep reading).
+- **Infinite Scroll Awareness**: Re-evaluates DOM scroll height dynamically as lazy content loads.
+
+---
 
 ## Troubleshooting
 
-- **Wayland Notes**: Xvfb works flawlessly via XWayland; no native Wayland alternatives are strictly necessary. The entire browser and FFmpeg pipeline runs invisibly inside the virtual display, bypassing the host compositor completely.
-- **Testing Xvfb**: If recordings fail to start, ensure Xvfb is functioning on your system by allocating a display:
+- **Wayland Notes**: Xvfb works via XWayland; the browser and FFmpeg pipeline run inside the virtual display, bypassing the host compositor completely.
+- **Testing Xvfb**: If recordings fail to start, verify Xvfb on your host:
   ```bash
   Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX &
   xdpyinfo -display :99
