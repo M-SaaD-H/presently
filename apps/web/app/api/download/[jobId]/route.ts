@@ -18,6 +18,8 @@ import path from "path";
 import fs from "fs";
 
 const OUTPUT_DIR = path.resolve(
+  // turborepo warning: This is only used in local dev.
+  // Cloud storage will be used in production
   process.env.OUTPUT_DIR ?? path.join(process.cwd(), "output")
 );
 
