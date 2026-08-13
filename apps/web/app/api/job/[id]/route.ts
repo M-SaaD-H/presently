@@ -4,6 +4,8 @@ import { ApiResponse, ApiError } from "@presently/shared";
 import { asyncHandler } from "@/utils/asyncHandler";
 import { auth } from "@/lib/auth";
 
+const WORKER_URL = process.env.WORKER_URL ?? "http://localhost:3001";
+
 export const GET = asyncHandler(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -30,6 +32,14 @@ export const GET = asyncHandler(async (
 
   if (job.user.toString() !== session.user.id) {
     throw new ApiError(403, "You do not have permission to view this job");
+  }
+
+  const url = job.publicUrl;
+  // The video is within the `worker`, storing the relative path in the
+  // db and to delegate the video fetching request to the worker, add
+  // the worker url before the `worker` relative path
+  if (!url.startsWith("http")) {
+    job.publicUrl = `${WORKER_URL}/${url.substring(1)}`;
   }
 
   return NextResponse.json(

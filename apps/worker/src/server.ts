@@ -13,6 +13,8 @@ import { z } from "zod";
 import { addRecordingJob, getJobStatus } from "./queue";
 import { connectDB } from "@presently/db";
 import { Job } from "@presently/db";
+import path from "path";
+import fs from "fs";
 
 const app: Express = express();
 app.use(express.json());
@@ -41,22 +43,32 @@ const EnqueueJobSchema = z.object({
   recordingOptions: RecordingOptionsSchema,
 });
 
-// Routes
+const OUTPUT_DIR = path.resolve(
+  // turborepo warning: This is only used in local dev.
+  // Cloud storage will be used in production
+  process.env.OUTPUT_DIR ?? path.join(process.cwd(), "output")
+);
+
+/**
+ * Routes
+ * 
+ * Don't have much routes so doing this workaround.
+ * Will follow MVC later if this project grows.
+ */
 
 /**
  * POST /jobs
  * Enqueues a new recording job.
  * Body: { jobId, url, recordingOptions }
  */
-app.post("/jobs", async (req: Request, res: Response) => {
+app.post("/api/jobs", async (req: Request, res: Response) => {
   const parsed = EnqueueJobSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
       message: "Invalid request body",
       errors: parsed.error.flatten().fieldErrors,
     });
-    return;
   }
 
   const { jobId, url, recordingOptions } = parsed.data;
@@ -64,11 +76,11 @@ app.post("/jobs", async (req: Request, res: Response) => {
   try {
     await connectDB();
     await addRecordingJob(jobId, url, recordingOptions);
-    res.status(202).json({ success: true, data: { jobId }, message: "Job enqueued" });
+    return res.status(202).json({ success: true, data: { jobId }, message: "Job enqueued" });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to enqueue job";
     console.error("[server] Failed to enqueue job:", err);
-    res.status(500).json({ success: false, message });
+    return res.status(500).json({ success: false, message });
   }
 });
 
@@ -76,7 +88,7 @@ app.post("/jobs", async (req: Request, res: Response) => {
  * GET /jobs/:jobId
  * Returns the current status of a recording job.
  */
-app.get("/jobs/:jobId", async (req: Request, res: Response) => {
+app.get("/api/jobs/:jobId", async (req: Request, res: Response) => {
   const jobId = Array.isArray(req.params.jobId) ? req.params.jobId[0] : req.params.jobId;
 
   if (!jobId) {
@@ -96,11 +108,10 @@ app.get("/jobs/:jobId", async (req: Request, res: Response) => {
         res.status(404).json({ success: false, message: `No job found with id: ${jobId}` });
         return;
       }
-      res.json({ success: true, data: queueStatus });
-      return;
+      return res.json({ success: true, data: queueStatus });
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         status: dbJob.status,
@@ -111,12 +122,51 @@ app.get("/jobs/:jobId", async (req: Request, res: Response) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to fetch job";
     console.error("[server] Failed to fetch job:", err);
-    res.status(500).json({ success: false, message });
+    return res.status(500).json({ success: false, message });
+  }
+});
+
+app.get('/api/download/:jobId', async (req: Request, res: Response) => {
+  const jobId = Array.isArray(req.params.jobId) ? req.params.jobId[0] : req.params.jobId;
+
+  if (!jobId) {
+    return res.status(400).json({ success: false, message: "Missing jobId" });
+  }
+
+  try {
+    await connectDB();
+    const dbJob = await Job.findById(jobId).catch(() => null);
+    // Cloud storage: redirect to CDN URL
+    if (dbJob.publicUrl.startsWith("http")) {
+      return res.redirect(dbJob.publicUrl);
+    }
+
+    // Local storage: stream file from disk
+    const filePath = path.join(OUTPUT_DIR, `${jobId}.mp4`);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: "Recording file not found on disk" });
+    }
+
+    const stat = fs.statSync(filePath);
+    const fileStream = fs.createReadStream(filePath);
+
+    res.status(200).set({
+      "Content-Type": "video/mp4",
+      "Content-Length": String(stat.size),
+      "Content-Disposition": `attachment; filename="presently-${jobId}.mp4"`,
+      "Accept-Ranges": "bytes",
+    });
+    fileStream.pipe(res);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to get recorded video";
+    console.error("[server] Failed to get recorded video:", err);
+    return res.status(500).json({ success: false, message });
   }
 });
 
 // Health check
-app.get("/health", (_req: Request, res: Response) => {
+app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ ok: true });
 });
 

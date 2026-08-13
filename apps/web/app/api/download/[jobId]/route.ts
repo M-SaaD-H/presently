@@ -14,14 +14,8 @@ import { ApiError } from "@presently/shared";
 import { asyncHandler } from "@/utils/asyncHandler";
 import { connectDB, Job } from "@presently/db";
 import { auth } from "@/lib/auth";
-import path from "path";
-import fs from "fs";
 
-const OUTPUT_DIR = path.resolve(
-  // turborepo warning: This is only used in local dev.
-  // Cloud storage will be used in production
-  process.env.OUTPUT_DIR ?? path.join(process.cwd(), "output")
-);
+const WORKER_URL = process.env.WORKER_URL ?? "http://localhost:3001";
 
 type Ctx = { params: Promise<{ jobId: string }> };
 
@@ -57,43 +51,24 @@ export const GET = asyncHandler<Ctx>(
       throw new ApiError(404, "No recording URL available for this job");
     }
 
-    // Cloud storage: redirect to CDN URL
-    if (job.publicUrl.startsWith("http")) {
-      return NextResponse.redirect(job.publicUrl, { status: 302 });
+    // Delegate to the worker HTTP API
+    const workerRes = await fetch(`${WORKER_URL}/api/download/${jobId}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+  
+    if (!workerRes.ok) {
+      throw new ApiError(502, "Failed to get the generated video.");
     }
 
-    // Local storage: stream file from disk
-    const filePath = path.join(OUTPUT_DIR, `${jobId}.mp4`);
+    const workerData = await workerRes.json();
 
-    if (!fs.existsSync(filePath)) {
-      throw new ApiError(404, "Recording file not found on disk");
+    const url = workerData.data.job.publicUrl;
+    // local url
+    if (!url.startsWith("http")) {
+      workerData.data.job.publicUrl = `${WORKER_URL}/${url.substring(1)}`;
     }
 
-    const stat = fs.statSync(filePath);
-    const fileStream = fs.createReadStream(filePath);
-
-    const webStream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        fileStream.on("data", (chunk: string | Buffer) => {
-          const bytes = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
-          controller.enqueue(new Uint8Array(bytes));
-        });
-        fileStream.on("end", () => controller.close());
-        fileStream.on("error", (err) => controller.error(err));
-      },
-      cancel() {
-        fileStream.destroy();
-      },
-    });
-
-    return new NextResponse(webStream, {
-      status: 200,
-      headers: {
-        "Content-Type": "video/mp4",
-        "Content-Length": String(stat.size),
-        "Content-Disposition": `attachment; filename="presently-${jobId}.mp4"`,
-        "Accept-Ranges": "bytes",
-      },
-    });
+    return new NextResponse(workerData);
   }
 );

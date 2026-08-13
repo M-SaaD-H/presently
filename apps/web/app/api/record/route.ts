@@ -66,7 +66,7 @@ export const POST = asyncHandler(async (req: NextRequest) => {
   const jobId = job._id.toString();
 
   // Delegate to the worker HTTP API, no direct Redis/BullMQ access from web
-  const workerRes = await fetch(`${WORKER_URL}/jobs`, {
+  const workerRes = await fetch(`${WORKER_URL}/api/jobs`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jobId, url: parsedUrl.toString(), recordingOptions }),
