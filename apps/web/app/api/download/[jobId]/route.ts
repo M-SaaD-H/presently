@@ -10,9 +10,9 @@
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { ApiError } from "@presently/shared";
+import { ApiError } from "@sitecast/shared";
 import { asyncHandler } from "@/utils/asyncHandler";
-import { connectDB, Job } from "@presently/db";
+import { connectDB, Job } from "@sitecast/db";
 import { auth } from "@/lib/auth";
 
 const WORKER_URL = process.env.WORKER_URL ?? "http://localhost:3001";

@@ -20,10 +20,10 @@ importers:
       '@base-ui/react':
         specifier: ^1.5.0
         version: 1.7.0(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@presently/db':
+      '@sitecast/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@presently/shared':
+      '@sitecast/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       better-auth:
@@ -96,13 +96,13 @@ importers:
 
   apps/worker:
     dependencies:
-      '@presently/db':
+      '@sitecast/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@presently/renderer':
+      '@sitecast/renderer':
         specifier: workspace:*
         version: link:../../packages/renderer
-      '@presently/shared':
+      '@sitecast/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@supabase/supabase-js':
@@ -149,7 +149,7 @@ importers:
 
   packages/renderer:
     dependencies:
-      '@presently/shared':
+      '@sitecast/shared':
         specifier: workspace:*
         version: link:../shared
       playwright:

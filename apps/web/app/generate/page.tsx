@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/toaster";
 import { StatusBar, RecordingStatus } from "./components/status-bar";
 import { RecordingOptionsPanel } from "./components/recording-options-panel";
-import type { RecordingOptions } from "@presently/shared";
+import type { RecordingOptions } from "@sitecast/shared";
 
 const DEFAULT_OPTIONS: RecordingOptions = {
   enableDarkMode: false,

@@ -5,7 +5,7 @@ export default function PrivacyPage() {
         <h1 className="font-serif text-3xl md:text-4xl tracking-tight text-foreground">Privacy Policy</h1>
         <div className="prose prose-zinc dark:prose-invert text-muted-foreground space-y-6">
           <p>
-            At Presently, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our application.
+            At Sitecast, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our application.
           </p>
           <h2 className="text-xl font-medium text-foreground mt-8 mb-4">Information We Collect</h2>
           <p>

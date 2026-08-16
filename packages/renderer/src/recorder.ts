@@ -23,7 +23,7 @@ import { chromium } from "playwright";
 import { acquireDisplay, releaseDisplay } from "./displayPool";
 import { startRecording, stopRecording } from "./ffmpeg";
 import { runScrollSession } from "./scroller";
-import type { RecordingJob, RecordingResult, RecordingOptions } from "@presently/shared";
+import type { RecordingJob, RecordingResult, RecordingOptions } from "@sitecast/shared";
 
 const CHROME_EXECUTABLE =
   process.env.CHROME_EXECUTABLE ?? "/usr/bin/google-chrome-stable";
@@ -61,7 +61,7 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
   let ffmpegHandle: ReturnType<typeof startRecording> | null = null;
   let browserContext: Awaited<ReturnType<typeof chromium.launchPersistentContext>> | null = null;
   let recordedDurationSeconds = 0;
-  const tempPath = path.join(os.tmpdir(), `presently-${job.jobId}.mp4`);
+  const tempPath = path.join(os.tmpdir(), `sitecast-${job.jobId}.mp4`);
 
   const args = constructChromiumArgs(job.options);
 
@@ -75,7 +75,7 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
     // Launch Chrome via Playwright
     // We use launchPersistentContext so we get a real user-data-dir, which
     // enables Chrome to render sites exactly as a user would see them.
-    const userDataDir = path.join(os.tmpdir(), `presently-profile-${job.jobId}`);
+    const userDataDir = path.join(os.tmpdir(), `sitecast-profile-${job.jobId}`);
     await fs.mkdir(userDataDir, { recursive: true });
 
     const displayEnv = `:${display}`;

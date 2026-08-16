@@ -1,5 +1,5 @@
 {
-  "name": "@presently/web",
+  "name": "@sitecast/web",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -10,8 +10,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@presently/db": "workspace:*",
-    "@presently/shared": "workspace:*",
+    "@sitecast/db": "workspace:*",
+    "@sitecast/shared": "workspace:*",
     "@base-ui/react": "^1.5.0",
     "better-auth": "^1.6.15",
     "class-variance-authority": "^0.7.1",

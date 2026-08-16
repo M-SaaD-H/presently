@@ -22,7 +22,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Presently - Website Demo Recorder",
+  title: "Sitecast - Website Demo Recorder",
   description: "Record smooth, human-like demo videos of any website.",
 };
 

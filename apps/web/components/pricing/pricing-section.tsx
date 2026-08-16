@@ -20,7 +20,7 @@ export function PricingSection({
     {
       name: "Free",
       price: "$0",
-      subtitle: "Try Presently before upgrading.",
+      subtitle: "Try Sitecast before upgrading.",
       features: [
         "2 demo generations",
         "Watermarked exports",

@@ -9,7 +9,7 @@ export function Footer() {
           <div className="col-span-2">
             <Link href="/" className="flex items-center space-x-2 mb-2">
               <Logo />
-              <span className="font-serif text-xl font-bold">Presently</span>
+              <span className="font-serif text-xl font-bold">Sitecast</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs">
               Automatically create polished product demos and walkthrough videos from any website.
@@ -39,7 +39,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-16 pt-8 border-t border-border/40 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} Presently. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Sitecast. All rights reserved.</p>
         </div>
       </div>
     </footer>

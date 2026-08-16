@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError } from "@presently/shared";
+import { ApiError } from "@sitecast/shared";
 
 type PlainHandler = (req: NextRequest) => Promise<NextResponse | Response>;
 type ContextHandler<C> = (

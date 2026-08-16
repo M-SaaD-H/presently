@@ -17,7 +17,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app ./
 EXPOSE 3000
-CMD ["pnpm", "--filter", "@presently/web", "start"]
+CMD ["pnpm", "--filter", "@sitecast/web", "start"]
 
 # Worker runner stage
 FROM base AS worker
@@ -33,4 +33,4 @@ ENV CHROME_EXECUTABLE=/usr/bin/chromium
 COPY --from=builder /app ./
 RUN mkdir -p output tmp /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
 EXPOSE 3001
-CMD ["pnpm", "--filter", "@presently/worker", "start"]
+CMD ["pnpm", "--filter", "@sitecast/worker", "start"]

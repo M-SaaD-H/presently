@@ -1,5 +1,5 @@
 {
-  "name": "@presently/renderer",
+  "name": "@sitecast/renderer",
   "version": "0.0.0",
   "private": true,
   "main": "./src/index.ts",
@@ -12,7 +12,7 @@
     "lint": "eslint ./src"
   },
   "dependencies": {
-    "@presently/shared": "workspace:*",
+    "@sitecast/shared": "workspace:*",
     "playwright": "^1.60.0"
   },
   "devDependencies": {

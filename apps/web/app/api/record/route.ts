@@ -9,11 +9,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, ApiResponse } from "@presently/shared";
+import { ApiError, ApiResponse, type RecordingOptions } from "@sitecast/shared";
+import { connectDB, Job } from "@sitecast/db";
 import { asyncHandler } from "@/utils/asyncHandler";
-import { connectDB, Job } from "@presently/db";
 import { auth } from "@/lib/auth";
-import type { RecordingOptions } from "@presently/shared";
 
 const WORKER_URL = process.env.WORKER_URL ?? "http://localhost:3001";
 

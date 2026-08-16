@@ -11,8 +11,8 @@
 import express, { type Request, type Response, type Express } from "express";
 import { z } from "zod";
 import { addRecordingJob, getJobStatus } from "./queue";
-import { connectDB } from "@presently/db";
-import { Job } from "@presently/db";
+import { connectDB } from "@sitecast/db";
+import { Job } from "@sitecast/db";
 import path from "path";
 import fs from "fs";
 
@@ -154,7 +154,7 @@ app.get('/api/download/:jobId', async (req: Request, res: Response) => {
     res.status(200).set({
       "Content-Type": "video/mp4",
       "Content-Length": String(stat.size),
-      "Content-Disposition": `attachment; filename="presently-${jobId}.mp4"`,
+      "Content-Disposition": `attachment; filename="sitecast-${jobId}.mp4"`,
       "Accept-Ranges": "bytes",
     });
     fileStream.pipe(res);

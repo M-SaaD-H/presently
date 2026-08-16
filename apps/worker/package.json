@@ -1,5 +1,5 @@
 {
-  "name": "@presently/worker",
+  "name": "@sitecast/worker",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -9,9 +9,9 @@
     "lint": "eslint ./src"
   },
   "dependencies": {
-    "@presently/db": "workspace:*",
-    "@presently/renderer": "workspace:*",
-    "@presently/shared": "workspace:*",
+    "@sitecast/db": "workspace:*",
+    "@sitecast/renderer": "workspace:*",
+    "@sitecast/shared": "workspace:*",
     "@supabase/supabase-js": "^2.107.0",
     "bullmq": "^5.78.0",
     "express": "^5.1.0",

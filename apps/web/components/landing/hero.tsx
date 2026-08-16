@@ -10,7 +10,7 @@ export function Hero() {
           polished product<span className="text-muted-foreground font-serif tracking-light italic font-normal"> demos.</span>
         </h1>
         <p className="mt-4 max-w-2xl text-sm md:text-base text-muted-foreground leading-relaxed">
-          Presently is an automated platform that creates high-quality walkthrough videos from any URL in seconds. No recording, no editing, no stress.
+          Sitecast is an automated platform that creates high-quality walkthrough videos from any URL in seconds. No recording, no editing, no stress.
         </p>
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
           <Link href="/generate" className="w-full sm:w-auto">

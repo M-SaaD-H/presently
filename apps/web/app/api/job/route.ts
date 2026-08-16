@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB, Job } from "@presently/db";
-import { ApiResponse, ApiError } from "@presently/shared";
+import { connectDB, Job } from "@sitecast/db";
+import { ApiResponse, ApiError } from "@sitecast/shared";
 import { asyncHandler } from "@/utils/asyncHandler";
 import { auth } from "@/lib/auth";
 

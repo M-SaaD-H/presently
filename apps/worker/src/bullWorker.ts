@@ -7,12 +7,11 @@
 
 import { Worker } from "bullmq";
 import { getRedisConnectionOptions } from "./redisConnection";
-import { recordWebsite } from "@presently/renderer";
 import { saveVideo, getLocalOutputPath } from "./storage";
-import type { RecordingJob, RecordingResult } from "@presently/shared";
 import { QUEUE_NAME } from "./queue";
-import { connectDB } from "@presently/db";
-import { Job } from "@presently/db";
+import { Job, connectDB } from "@sitecast/db";
+import type { RecordingJob, RecordingResult } from "@sitecast/shared";
+import { recordWebsite } from "@sitecast/renderer";
 
 const MAX_WORKERS = parseInt(process.env.MAX_CONCURRENT_WORKERS ?? "3", 10);
 

@@ -1,5 +1,5 @@
 {
-  "name": "@presently/shared",
+  "name": "@sitecast/shared",
   "version": "0.0.0",
   "private": true,
   "main": "./src/index.ts",

@@ -8,9 +8,9 @@
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { ApiError, ApiResponse } from "@presently/shared";
+import { ApiError, ApiResponse } from "@sitecast/shared";
+import { connectDB, Job } from "@sitecast/db";
 import { asyncHandler } from "@/utils/asyncHandler";
-import { connectDB, Job } from "@presently/db";
 import { auth } from "@/lib/auth";
 
 type Ctx = { params: Promise<{ jobId: string }> };

@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { RecordingOptions } from "@presently/shared";
+import type { RecordingOptions } from "@sitecast/shared";
 import { Info } from "lucide-react";
 
 interface RecordingOptionsPanelProps {

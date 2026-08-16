@@ -4,7 +4,7 @@
 
 import { Queue } from "bullmq";
 import { getRedisConnectionOptions } from "./redisConnection";
-import type { RecordingJob, RecordingOptions, RecordingResult } from "@presently/shared";
+import type { RecordingJob, RecordingOptions, RecordingResult } from "@sitecast/shared";
 
 export const QUEUE_NAME = "recording";
 

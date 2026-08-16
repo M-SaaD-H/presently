@@ -15,7 +15,7 @@
  */
 
 import type { Page } from "playwright";
-import type { ScrollOptions } from "@presently/shared";
+import type { ScrollOptions } from "@sitecast/shared";
 
 // Lerp factor: what fraction of remaining distance to cover each frame
 const BASE_EASING_FACTOR = 0.06;
