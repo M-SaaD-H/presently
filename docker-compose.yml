@@ -8,16 +8,13 @@ services:
       - "3000:3000"
     networks:
       - net
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file:
-      - .env.local
+      - apps/web/.env.local
     environment:
       - NODE_ENV=production
-      - WORKER_URL=http://worker:3001
-      - MONGODB_URI=${MONGODB_URI}
-      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
-      - BETTER_AUTH_URL=${BETTER_AUTH_URL}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     volumes:
       - shared_output:/app/output
     restart: unless-stopped
@@ -31,18 +28,17 @@ services:
       - "3001:3001"
     networks:
       - net
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file:
-      - .env.local
+      - apps/worker/.env.local
     environment:
       - NODE_ENV=production
       - WORKER_PORT=3001
       - STORAGE_TYPE=local
       - OUTPUT_DIR=/app/output
       - CHROME_EXECUTABLE=/usr/bin/chromium
-      - REDIS_URL=${REDIS_URL}
-      - MONGODB_URI=${MONGODB_URI}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_SECRET_KEY=${SUPABASE_SECRET_KEY}
     volumes:
       - shared_output:/app/output
     shm_size: '2gb'
