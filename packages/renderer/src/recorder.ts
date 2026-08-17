@@ -82,7 +82,7 @@ export async function recordWebsite(job: RecordingJob): Promise<RecordingResult>
     browserContext = await chromium.launchPersistentContext(userDataDir, {
       executablePath: CHROME_EXECUTABLE,
       headless: false,
-      chromiumSandbox: true,
+      chromiumSandbox: false,
       // Set viewport to null so Playwright inherits the browser window's size.
       // This is required for --kiosk and full-screen flags to actually take effect
       // without Playwright restricting the web content into a letterboxed viewport.
